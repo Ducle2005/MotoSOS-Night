@@ -1,30 +1,38 @@
-import { ArrowRight, CheckCircle2, Crown, RefreshCw, ShieldCheck, Sparkles, Zap } from 'lucide-react';
-import { useState } from 'react';
+import { AlertCircle, ArrowRight, CheckCircle2, Crown, ShieldCheck } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import {
   getActivePurchasedMembership, getMembershipPlan, getPurchasedMemberships,
   purchaseOrSwitchMembership, type PurchasedMembership,
 } from '../data/membershipCatalog';
+import {
+  formatDateVi, getDaysRemaining, getMembershipSubscription,
+  reactivateSubscriptionAutoRenew, type MembershipSubscription,
+} from '../utils/membershipLifecycle';
 import { formatVnd } from '../utils/pricingAndSimLogic';
+import { CancelMembershipModal } from './modals/CancelMembershipModal';
 
 interface MyMembershipViewProps {
   onExplorePlans: () => void;
   onBookNow: () => void;
 }
 
-function formatExpiryDate(isoStr: string) {
-  try {
-    const d = new Date(isoStr);
-    return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
-  } catch {
-    return '17/12/2026';
-  }
-}
-
 export function MyMembershipView({ onExplorePlans, onBookNow }: MyMembershipViewProps) {
   const [data, setData] = useState(() => getActivePurchasedMembership());
   const [allPurchased, setAllPurchased] = useState<PurchasedMembership[]>(() => getPurchasedMemberships());
+  const [sub, setSub] = useState<MembershipSubscription>(() => getMembershipSubscription(data.plan.id));
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
 
   const { record, plan } = data;
+
+  useEffect(() => {
+    const onSubChanged = (e: any) => {
+      if (e?.detail) setSub(e.detail);
+      else setSub(getMembershipSubscription(plan.id));
+    };
+    window.addEventListener('motosos_membership_sub_changed', onSubChanged);
+    return () => window.removeEventListener('motosos_membership_sub_changed', onSubChanged);
+  }, [plan.id]);
+
   const otherPurchased = allPurchased.filter((p) => p.id !== record.id);
   const quotaPercent = Math.max(0, Math.min(100, Math.round((record.remainingQuota / record.totalQuota) * 100)));
 
@@ -32,6 +40,12 @@ export function MyMembershipView({ onExplorePlans, onBookNow }: MyMembershipView
     purchaseOrSwitchMembership(planId);
     setData(getActivePurchasedMembership());
     setAllPurchased(getPurchasedMemberships());
+    setSub(getMembershipSubscription(planId));
+  };
+
+  const handleReactivate = () => {
+    const updated = reactivateSubscriptionAutoRenew();
+    setSub(updated);
   };
 
   return (
@@ -52,10 +66,50 @@ export function MyMembershipView({ onExplorePlans, onBookNow }: MyMembershipView
         </div>
 
         <div className="mt-4 pt-3 border-t border-white/15 flex items-center justify-between text-[11px] text-white/90">
-          <span>Hiệu lực đến {formatExpiryDate(record.expiresAt)}</span>
-          <span className="font-extrabold text-amber-300">Chu kỳ {plan.billingCycle}</span>
+          <div className="flex items-center gap-1.5">
+            <span className={`h-1.5 w-1.5 rounded-full ${sub.autoRenew ? 'bg-emerald-300 animate-pulse' : 'bg-amber-300'}`} />
+            <span>{sub.autoRenew ? `Gia hạn tự động: ${formatDateVi(sub.expiresAt)}` : `Hết hạn ngày: ${formatDateVi(sub.expiresAt)}`}</span>
+          </div>
+          {sub.autoRenew ? (
+            <button
+              type="button"
+              onClick={() => setIsCancelModalOpen(true)}
+              className="text-white/80 hover:text-white underline font-semibold transition-opacity"
+            >
+              Hủy gia hạn
+            </button>
+          ) : (
+            <span className="text-amber-200 font-bold">Đã dừng gia hạn</span>
+          )}
         </div>
       </div>
+
+      {/* Banner Cảnh Báo Khi Đã Hủy Gia Hạn Nhưng Còn Quyền Lợi */}
+      {!sub.autoRenew && (
+        <div className="p-3.5 rounded-2xl bg-amber-50/90 border border-amber-200/80 flex items-start justify-between gap-3 shadow-2xs animate-in fade-in">
+          <div className="flex items-start gap-2.5 min-w-0">
+            <AlertCircle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <p className="text-xs font-black text-amber-950">Đã hủy gia hạn tự động</p>
+                <span className="px-1.5 py-0.2 rounded text-[9.5px] font-extrabold bg-amber-200 text-amber-900">
+                  Còn {getDaysRemaining(sub.expiresAt)} ngày
+                </span>
+              </div>
+              <p className="text-[11px] text-amber-800 mt-0.5 leading-snug">
+                Toàn bộ quyền lợi được giữ nguyên đến ngày <strong>{formatDateVi(sub.expiresAt)}</strong>. Sau ngày này sẽ không tự động trừ tiền.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleReactivate}
+            className="px-2.5 py-1.5 rounded-xl bg-[#13693E] hover:bg-[#0F5C36] text-white text-[11px] font-bold shrink-0 active:scale-95 transition-all shadow-xs"
+          >
+            Bật lại
+          </button>
+        </div>
+      )}
 
       {/* 2. Khung Thống Kê Quyền Lợi & Lượt Dùng */}
       <div className="p-3.5 rounded-2xl bg-[#F4F8F6] border border-emerald-600/15 grid grid-cols-2 gap-3 items-center">
@@ -73,48 +127,44 @@ export function MyMembershipView({ onExplorePlans, onBookNow }: MyMembershipView
         </div>
       </div>
 
-      {/* 3. Danh Sách Quyền Lợi Đang Hưởng Dạng Phẳng Chuẩn Grab */}
+      {/* 3. Danh Sách Quyền Lợi Đang Hưởng */}
       <div className="rounded-2xl border border-slate-200/80 bg-white p-3.5 divide-y divide-slate-100 shadow-2xs">
         <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider pb-2">Đặc quyền gói của bạn:</h4>
 
-        <div className="py-2.5 flex items-start gap-2.5">
+        <div className="py-2 flex items-start gap-2.5">
           <CheckCircle2 className="h-4 w-4 text-[#13693E] shrink-0 mt-0.5" />
           <div className="min-w-0 flex-1">
             <p className="text-[12.5px] font-extrabold text-slate-900">Giảm {plan.discountPercent}% • Tối đa {formatVnd(plan.maxDiscountPerOrder)}/chuyến</p>
-            <p className="text-[11px] text-slate-500 mt-0.5">Tự động áp dụng khi xác nhận điều thợ trên toàn hệ thống</p>
+            <p className="text-[11px] text-slate-500">Tự động áp dụng khi xác nhận điều thợ trên toàn hệ thống</p>
           </div>
         </div>
 
-        <div className="py-2.5 flex items-start gap-2.5">
+        <div className="py-2 flex items-start gap-2.5">
           <CheckCircle2 className="h-4 w-4 text-[#13693E] shrink-0 mt-0.5" />
           <div className="min-w-0 flex-1">
             <p className="text-[12.5px] font-extrabold text-slate-900">Ưu tiên điều thợ nhanh &lt; 5 phút</p>
-            <p className="text-[11px] text-slate-500 mt-0.5">Đưa yêu cầu cứu hộ lên đầu danh sách điều phối mạng lưới</p>
+            <p className="text-[11px] text-slate-500">Đưa yêu cầu cứu hộ lên đầu danh sách điều phối mạng lưới</p>
           </div>
         </div>
 
-        <div className="py-2.5 flex items-start gap-2.5">
+        <div className="py-2 flex items-start gap-2.5">
           <CheckCircle2 className="h-4 w-4 text-[#13693E] shrink-0 mt-0.5" />
           <div className="min-w-0 flex-1">
-            <p className="text-[12.5px] font-extrabold text-slate-900">
-              {plan.nightFeeWaived ? 'Miễn phí 100% phụ phí đêm (+20.000đ)' : 'Phụ phí đêm theo biểu phí tiêu chuẩn'}
-            </p>
-            <p className="text-[11px] text-slate-500 mt-0.5">
-              {plan.nightFeeWaived ? 'Khung giờ đêm từ 22:00 đến 05:00 sáng hôm sau' : 'Áp dụng biểu phí chuẩn cho khung giờ 22h-5h'}
-            </p>
+            <p className="text-[12.5px] font-extrabold text-slate-900">{plan.nightFeeWaived ? 'Miễn phí 100% phụ phí đêm (+20.000đ)' : 'Phụ phí đêm theo biểu phí tiêu chuẩn'}</p>
+            <p className="text-[11px] text-slate-500">{plan.nightFeeWaived ? 'Khung giờ đêm từ 22:00 đến 05:00 sáng hôm sau' : 'Áp dụng biểu phí chuẩn cho khung giờ 22h-5h'}</p>
           </div>
         </div>
 
-        <div className="pt-2.5 flex items-start gap-2.5">
+        <div className="pt-2 flex items-start gap-2.5">
           <CheckCircle2 className="h-4 w-4 text-[#13693E] shrink-0 mt-0.5" />
           <div className="min-w-0 flex-1">
             <p className="text-[12.5px] font-extrabold text-slate-900">Bảo hiểm cứu hộ tới {formatVnd(plan.insuranceLimit)}</p>
-            <p className="text-[11px] text-slate-500 mt-0.5">Bảo vệ toàn diện phương tiện và an toàn chuyến đi</p>
+            <p className="text-[11px] text-slate-500">Bảo vệ toàn diện phương tiện và an toàn chuyến đi</p>
           </div>
         </div>
       </div>
 
-      {/* 4. Lịch Sử Các Gói Đã Mua (Nếu có nhiều gói) */}
+      {/* 4. Lịch Sử Các Gói Đã Mua */}
       {otherPurchased.length > 0 && (
         <div className="rounded-2xl border border-slate-200/80 bg-white p-3 space-y-2">
           <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Các gói đã lưu:</p>
@@ -124,7 +174,7 @@ export function MyMembershipView({ onExplorePlans, onBookNow }: MyMembershipView
               <div key={old.id} className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between gap-2">
                 <div>
                   <span className="text-xs font-bold text-slate-800">{oldPlan.name}</span>
-                  <span className="text-[10px] text-slate-500 block">Còn {old.remainingQuota} lượt • {formatExpiryDate(old.expiresAt)}</span>
+                  <span className="text-[10px] text-slate-500 block">Còn {old.remainingQuota} lượt • {formatDateVi(new Date(old.expiresAt).getTime())}</span>
                 </div>
                 <button
                   type="button" onClick={() => handleSwitch(old.id)}
@@ -154,6 +204,17 @@ export function MyMembershipView({ onExplorePlans, onBookNow }: MyMembershipView
           Đổi / Nâng cấp gói khác
         </button>
       </div>
+
+      {/* Modal Hủy Gia Hạn Gói */}
+      <CancelMembershipModal
+        isOpen={isCancelModalOpen}
+        plan={plan}
+        record={record}
+        sub={sub}
+        onClose={() => setIsCancelModalOpen(false)}
+        onSuccess={() => setSub(getMembershipSubscription(plan.id))}
+      />
     </div>
   );
 }
+export default MyMembershipView;

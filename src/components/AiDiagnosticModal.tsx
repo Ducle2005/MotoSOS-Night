@@ -4,25 +4,27 @@ import {
   askAiMechanic, getStoredGeminiApiKey, maskApiKey, setStoredGeminiApiKey,
   type AiReplyType, type ChatHistoryEntry, type DiagnosticServiceId, type MechanicDiagnosis,
 } from '../services/geminiDiagnosticService';
+import { loadUserProfile, type UserProfileData } from '../types/profile';
 import { AiDiagnosisCard } from './AiDiagnosisCard';
 
 export interface AiDiagnosticModalProps {
-  isOpen: boolean; onClose: () => void;
-  onSelectServiceAndOrder: (serviceId: DiagnosticServiceId) => void;
+  isOpen: boolean; onClose: () => void; onSelectServiceAndOrder: (serviceId: DiagnosticServiceId) => void;
 }
-
 interface ChatItem {
   id: string; role: 'user' | 'assistant'; text: string;
   replyType?: AiReplyType; diagnosis?: MechanicDiagnosis; isLiveAi?: boolean;
 }
-
 const QUICK_CHIPS = ['Đề không nổ, tạch tạch', 'Xe ngập nước chết máy', 'Lủng lốp / xì hơi', 'Lên ga xe không chạy'];
 
 export function AiDiagnosticModal({ isOpen, onClose, onSelectServiceAndOrder }: AiDiagnosticModalProps) {
-  const [messages, setMessages] = useState<ChatItem[]>([{
-    id: 'welcome', role: 'assistant', replyType: 'chat',
-    text: 'Chào bạn! Tôi là Kỹ sư AI MotoSOS. Xe của bạn đang có biểu hiện gì lạ? Hãy mô tả âm thanh, khói, cảm giác lái hoặc chọn nhanh các triệu chứng bên dưới để tôi bắt bệnh nhé!',
-  }]);
+  const [profile, setProfile] = useState<UserProfileData>(loadUserProfile);
+  const [messages, setMessages] = useState<ChatItem[]>(() => {
+    const p = loadUserProfile();
+    return [{
+      id: 'welcome', role: 'assistant', replyType: 'chat',
+      text: `Chào ${p.fullName}! Tôi là Kỹ sư AI MotoSOS đã nhận diện xe ${p.bikeModel} (${p.licensePlate}). Xe đang có biểu hiện gì lạ? Hãy mô tả âm thanh, khói, cảm giác lái để tôi chẩn đoán nhé!`,
+    }];
+  });
   const [inputText, setInputText] = useState('');
   const [isThinking, setIsThinking] = useState(false);
   const [showKeyPrompt, setShowKeyPrompt] = useState(false);
@@ -32,6 +34,7 @@ export function AiDiagnosticModal({ isOpen, onClose, onSelectServiceAndOrder }: 
 
   useEffect(() => {
     if (isOpen) {
+      setProfile(loadUserProfile());
       const key = getStoredGeminiApiKey();
       setActiveKey(key);
       setApiKeyInput(key ? maskApiKey(key) : '');
@@ -60,10 +63,7 @@ export function AiDiagnosticModal({ isOpen, onClose, onSelectServiceAndOrder }: 
         { id: `ai_${Date.now()}`, role: 'assistant', replyType: resp.replyType, text: resp.messageText, diagnosis: resp.diagnosis, isLiveAi: resp.isLiveAi },
       ]);
     } catch {
-      setMessages((prev) => [
-        ...prev,
-        { id: `err_${Date.now()}`, role: 'assistant', replyType: 'chat', text: 'Có lỗi tạm thời khi kết nối. Hãy thử lại hoặc chọn gói cứu hộ trực tiếp.' },
-      ]);
+      setMessages((prev) => [...prev, { id: `err_${Date.now()}`, role: 'assistant', replyType: 'chat', text: 'Có lỗi tạm thời khi kết nối. Hãy thử lại hoặc chọn gói cứu hộ trực tiếp.' }]);
     } finally {
       setIsThinking(false);
     }
@@ -127,6 +127,15 @@ export function AiDiagnosticModal({ isOpen, onClose, onSelectServiceAndOrder }: 
             </div>
           </div>
         </header>
+
+          {/* Đồng bộ thông tin xe chủ phương tiện */}
+          <div className="bg-[#0e1422] border-b border-white/10 px-4 py-1.5 flex items-center justify-between text-[11px] shrink-0">
+            <span className="flex items-center gap-1.5 text-slate-300">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+              <span>Chủ xe: <strong className="text-white font-bold">{profile.fullName}</strong></span>
+            </span>
+            <span className="font-bold text-emerald-400">{profile.bikeModel} • {profile.licensePlate}</span>
+          </div>
 
         {/* API Key Drawer Accordion */}
         {showKeyPrompt && (

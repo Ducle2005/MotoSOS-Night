@@ -1,4 +1,4 @@
-import { Award, Bell, Check, ChevronRight, Copy, FileText, MapPin, ShieldCheck, Sparkles } from 'lucide-react';
+import { Award, Bell, Check, ChevronRight, Copy, FileText, MapPin, Settings, ShieldCheck, Sparkles } from 'lucide-react';
 import { useState } from 'react';
 
 interface ProfileGroupSectionsProps {
@@ -7,8 +7,11 @@ interface ProfileGroupSectionsProps {
   onNavigateToActivity: () => void;
   onOpenAddresses: () => void;
   onOpenNotifications: () => void;
+  onOpenSettings?: () => void;
   onOpenTerms?: () => void;
   activePlanName?: string;
+  unreadCount?: number;
+  isProtected?: boolean;
 }
 
 export function ProfileGroupSections({
@@ -17,8 +20,11 @@ export function ProfileGroupSections({
   onNavigateToActivity,
   onOpenAddresses,
   onOpenNotifications,
+  onOpenSettings,
   onOpenTerms,
   activePlanName,
+  unreadCount,
+  isProtected,
 }: ProfileGroupSectionsProps) {
   const [copiedCode, setCopiedCode] = useState(false);
 
@@ -122,9 +128,35 @@ export function ProfileGroupSections({
           >
             <div className="flex items-center gap-3">
               <Bell className="h-4 w-4 text-slate-600" />
-              <span className="text-xs font-bold text-slate-800">Thông báo &amp; Cài đặt</span>
+              <span className="text-xs font-bold text-slate-800">Thông báo</span>
             </div>
-            <ChevronRight className="h-4 w-4 text-slate-400" />
+            <div className="flex items-center gap-1.5">
+              {unreadCount && unreadCount > 0 ? (
+                <span className="rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-extrabold text-rose-600 border border-rose-200">
+                  {unreadCount} mới
+                </span>
+              ) : null}
+              <ChevronRight className="h-4 w-4 text-slate-400" />
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={onOpenSettings}
+            className="flex w-full items-center justify-between py-3 text-left hover:bg-slate-50/50"
+          >
+            <div className="flex items-center gap-3">
+              <Settings className="h-4 w-4 text-slate-600" />
+              <span className="text-xs font-bold text-slate-800">Cài đặt</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold border ${
+                isProtected ? 'bg-emerald-50 text-[#13693E] border-emerald-200' : 'bg-slate-50 text-slate-500 border-slate-200'
+              }`}>
+                {isProtected ? 'Đã bảo vệ' : 'Thiết lập'}
+              </span>
+              <ChevronRight className="h-4 w-4 text-slate-400" />
+            </div>
           </button>
 
           <button

@@ -11,7 +11,17 @@
     font-family: var(--font-sans);
     background-color: #0f172a;
     color: #0f172a;
-    overscroll-behavior-y: contain;
+    touch-action: manipulation;
+    overscroll-behavior: none;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  @media screen and (max-width: 768px) {
+    input,
+    textarea,
+    select {
+      font-size: max(16px, 1rem);
+    }
   }
 }
 
@@ -71,4 +81,45 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+@keyframes motosos-orbit-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+@keyframes motosos-orbit-fast {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+@keyframes motosos-pulse {
+  0% { transform: scale(0.92); opacity: 0.55; }
+  100% { transform: scale(1.55); opacity: 0; }
+}
+@keyframes motosos-pop {
+  0% { transform: scale(0.82); opacity: 0; }
+  70% { transform: scale(1.04); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes motosos-progress {
+  0% { width: 0%; }
+  100% { width: 100%; }
+}
+
+.animate-motosos-orbit-slow {
+  animation: motosos-orbit-slow 9s linear infinite;
+  will-change: transform;
+}
+.animate-motosos-orbit-fast {
+  animation: motosos-orbit-fast 1.45s cubic-bezier(0.55, 0.08, 0.45, 0.92) infinite;
+  will-change: transform;
+}
+.animate-motosos-pulse {
+  animation: motosos-pulse 1.8s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+  will-change: transform, opacity;
+}
+.animate-motosos-pop {
+  animation: motosos-pop 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.animate-motosos-progress {
+  animation: motosos-progress 1.75s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }

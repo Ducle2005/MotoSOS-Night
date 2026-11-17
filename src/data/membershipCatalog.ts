@@ -177,15 +177,10 @@ export function getPurchasedMemberships(): PurchasedMembership[] {
   if (typeof window === 'undefined' || typeof localStorage === 'undefined') return memoryPurchasedList;
   try {
     const raw = localStorage.getItem(PURCHASED_KEY);
-    if (!raw) {
-      localStorage.setItem(PURCHASED_KEY, JSON.stringify(DEFAULT_PURCHASED));
-      return DEFAULT_PURCHASED;
-    }
+    if (!raw) { localStorage.setItem(PURCHASED_KEY, JSON.stringify(DEFAULT_PURCHASED)); return DEFAULT_PURCHASED; }
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) && parsed.length > 0 ? parsed : DEFAULT_PURCHASED;
-  } catch {
-    return memoryPurchasedList;
-  }
+  } catch { return memoryPurchasedList; }
 }
 
 export function getActivePurchasedMembership(): { record: PurchasedMembership; plan: MembershipCardPlan } {
@@ -218,7 +213,12 @@ export function purchaseOrSwitchMembership(planId: string): void {
   }
   memoryPurchasedList = list;
   if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
-    try { localStorage.setItem(PURCHASED_KEY, JSON.stringify(list)); } catch {}
+    try {
+      localStorage.setItem(PURCHASED_KEY, JSON.stringify(list));
+      const sub = { planId: plan.id, subscribedAt: Date.now(), expiresAt: Date.now() + 30 * 86400000, autoRenew: true };
+      localStorage.setItem('motosos_membership_sub', JSON.stringify(sub));
+      window.dispatchEvent(new CustomEvent('motosos_membership_sub_changed', { detail: sub }));
+    } catch {}
   }
   setActiveMembershipId(plan.id);
 }

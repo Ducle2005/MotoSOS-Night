@@ -1,6 +1,7 @@
-import { AlertTriangle, Copy, MapPin, MessageCircle, Send, ShieldAlert, X } from 'lucide-react';
+import { AlertTriangle, Copy, MapPin, MessageCircle, Send, ShieldAlert, User, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useState } from 'react';
+import { EMERGENCY_CONTACT_KEY, loadUserProfile } from '../../types/profile';
 import type { ActiveLocation } from '../../types/rescue';
 import {
   buildSosSharePayload,
@@ -31,10 +32,13 @@ export function SOSModal({
 
   const lat = activeLocation.lat;
   const lng = activeLocation.lng;
+  const profile = loadUserProfile();
+  const emergencyPhone = (typeof window !== 'undefined' ? localStorage.getItem(EMERGENCY_CONTACT_KEY) : null) || savedPhone || profile.phone;
 
   const getPayload = () => buildSosSharePayload({
     location: activeLocation,
     address: activeLocation.address,
+    vehiclePlate: profile.licensePlate,
   });
 
   const showToast = (msg: string) => {
@@ -43,7 +47,7 @@ export function SOSModal({
   };
 
   const handleShareZalo = async () => {
-    const res = await shareViaZalo(savedPhone || '', getPayload());
+    const res = await shareViaZalo(emergencyPhone || '', getPayload());
     showToast(res.message);
   };
 
@@ -127,6 +131,18 @@ export function SOSModal({
             </div>
           </div>
 
+          {/* Sender & Vehicle Info */}
+          <div className="mt-2.5 rounded-xl border border-slate-200/80 bg-slate-50 px-3 py-2 flex items-center justify-between text-xs">
+            <div className="min-w-0 pr-2">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Người gửi cứu hộ</span>
+              <p className="font-extrabold text-slate-800 truncate">{profile.fullName} • {profile.phone}</p>
+            </div>
+            <div className="text-right shrink-0">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Phương tiện</span>
+              <p className="font-extrabold text-[#13693E]">{profile.licensePlate}</p>
+            </div>
+          </div>
+
           {/* Toast thông báo */}
           {toastMessage && (
             <div className="mt-2.5 p-2 rounded-xl bg-emerald-50 border border-emerald-200 text-xs font-bold text-emerald-800 text-center animate-in fade-in duration-150">
@@ -144,7 +160,7 @@ export function SOSModal({
                 className="flex min-h-[46px] items-center justify-center gap-1.5 rounded-xl bg-[#0068FF] px-3 text-xs font-bold text-white shadow-md shadow-blue-500/20 hover:bg-blue-600 active:scale-[0.99] transition-all"
               >
                 <Send className="h-3.5 w-3.5" aria-hidden="true" />
-                <span>Gửi Zalo {savedPhone ? `(${savedPhone.slice(-4)})` : ''}</span>
+                <span>Gửi Zalo {emergencyPhone ? `(${emergencyPhone.slice(-4)})` : ''}</span>
               </button>
 
               <button
