@@ -1,161 +1,203 @@
-import { Award, Check, Clock, Crown, ShieldCheck, Sparkles, Wrench, X } from 'lucide-react';
+import { Check, Crown, Lock, ShieldCheck, Sparkles, X } from 'lucide-react';
+import { useState } from 'react';
+import { createPortal } from 'react-dom';
 
 interface MemberBenefitModalProps {
   isOpen: boolean;
-  type: 'membership' | 'tier';
+  type?: 'membership' | 'tier';
   onClose: () => void;
 }
 
-const MEMBERSHIP_BENEFITS = [
-  {
-    icon: Wrench,
-    title: 'Miễn phí vá lốp khẩn cấp',
-    desc: 'Hỗ trợ vá lốp lưu động miễn phí không giới hạn số lần tại hiện trường.',
-  },
-  {
-    icon: Clock,
-    title: 'Ưu tiên điều phối thợ ban đêm',
-    desc: 'Thợ cứu hộ có mặt trong 10-15 phút, ưu tiên vượt trội vào khung giờ 22:00 - 05:00.',
-  },
-  {
-    icon: ShieldCheck,
-    title: 'Trợ cấp xe kéo về Trạm An Toàn',
-    desc: 'Nếu xe không thể khắc phục tại chỗ, miễn phí đưa về Trạm An Toàn 24/7 gần nhất.',
-  },
-];
+type TierId = 'silver' | 'gold' | 'platinum' | 'diamond';
 
-const TIER_PROGRESS = [
-  { tier: 'Hạng Bạc', points: '0 - 99 điểm', active: true, done: true },
-  { tier: 'Hạng Vàng', points: '100 - 249 điểm', active: true, done: true },
-  { tier: 'Hạng Bạch Kim', points: '250 - 499 điểm (Hiện tại: 320 điểm)', active: true, isCurrent: true },
-  { tier: 'Hạng Kim Cương', points: '500+ điểm', active: false },
-];
+interface TierDetail {
+  id: TierId; name: string; shortName: string; pointsRange: string;
+  discountLabel: string; perks: string; statusText: string;
+  isCurrent?: boolean; isUnlocked?: boolean;
+}
 
-export function MemberBenefitModal({
-  isOpen,
-  type,
-  onClose,
-}: MemberBenefitModalProps) {
-  if (!isOpen) return null;
+const TIERS_DATA: Record<TierId, TierDetail> = {
+  silver: {
+    id: 'silver', name: 'Hạng Bạc', shortName: 'Bạc', pointsRange: '0 – 99 điểm',
+    discountLabel: 'Giảm 10.000đ/chuyến',
+    perks: 'Hỗ trợ kết nối đội ngũ kỹ thuật viên cứu hộ 24/7 trên toàn TP.HCM.',
+    statusText: 'Đã hoàn thành', isUnlocked: true,
+  },
+  gold: {
+    id: 'gold', name: 'Hạng Vàng', shortName: 'Vàng', pointsRange: '100 – 249 điểm',
+    discountLabel: 'Giảm 15.000đ/chuyến',
+    perks: 'Ưu tiên điều phối thợ ban ngày & Kiểm tra xe tổng quát miễn phí tại hiện trường.',
+    statusText: 'Đã hoàn thành', isUnlocked: true,
+  },
+  platinum: {
+    id: 'platinum', name: 'Hạng Bạch Kim', shortName: 'Bạch Kim', pointsRange: '250 – 499 điểm',
+    discountLabel: 'Giảm 25.000đ/chuyến',
+    perks: 'Ưu tiên điều phối thợ nhanh & Miễn phí hủy trong 5 phút đầu.',
+    statusText: 'Hạng hiện tại • 320 điểm', isCurrent: true, isUnlocked: true,
+  },
+  diamond: {
+    id: 'diamond', name: 'Hạng Kim Cương', shortName: 'Kim Cương', pointsRange: '500+ điểm',
+    discountLabel: 'Giảm 35.000đ/chuyến',
+    perks: 'Cứu hộ khẩn cấp hỏa tốc < 12 phút & Đường dây nóng Tổng đài VIP riêng biệt.',
+    statusText: 'Cần thêm 180 điểm', isUnlocked: false,
+  },
+};
 
-  return (
+export function MemberBenefitModal({ isOpen, type = 'tier', onClose }: MemberBenefitModalProps) {
+  const [selectedTierId, setSelectedTierId] = useState<TierId>('platinum');
+
+  if (!isOpen || typeof document === 'undefined') return null;
+
+  const activeTier = TIERS_DATA[selectedTierId];
+
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
-      aria-label={type === 'membership' ? 'Gói hội viên Priority' : 'Hạng thành viên Bạch Kim'}
-      className="fixed inset-0 z-[120] flex items-end justify-center bg-slate-950/60 p-0 sm:items-center sm:p-4"
+      aria-label="Hạng thành viên"
+      className="fixed inset-0 z-[999] flex items-end justify-center bg-slate-950/45 p-0 sm:items-center sm:p-4 animate-in fade-in duration-200"
+      onClick={onClose}
     >
-      <div className="w-full max-w-[430px] rounded-t-[28px] border-t border-slate-100 bg-white p-5 shadow-2xl sm:rounded-[28px] sm:border">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-          <div className="flex items-center gap-2">
-            <span className={`flex h-8 w-8 items-center justify-center rounded-xl ${
-              type === 'membership' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'
-            }`}>
-              {type === 'membership' ? <Sparkles className="h-4 w-4" /> : <Crown className="h-4 w-4" />}
-            </span>
-            <div>
-              <h2 className="text-base font-extrabold text-slate-900">
-                {type === 'membership' ? 'Gói hội viên Priority 24/7' : 'Hạng thành viên Bạch Kim'}
-              </h2>
-              <p className="text-xs text-slate-500">
-                {type === 'membership' ? 'Đặc quyền cứu hộ & lá chắn đêm khuya' : 'Tích lũy 320 điểm sau các lần cứu hộ'}
-              </p>
-            </div>
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-[430px] max-h-[88vh] bg-white rounded-t-[24px] sm:rounded-2xl flex flex-col overflow-hidden shadow-2xl"
+      >
+        {/* Thanh nắm kéo mảnh căn giữa ở đỉnh */}
+        <div className="w-9 h-1 rounded-full bg-slate-200 mx-auto mt-2.5 mb-1 shrink-0" />
+
+        {/* 1. Hàng tiêu đề */}
+        <div className="px-4 py-2.5 flex items-center justify-between border-b border-slate-100 shrink-0">
+          <div>
+            <h2 className="text-[18px] font-extrabold text-slate-950 tracking-tight">Hạng thành viên</h2>
+            <p className="text-[11.5px] text-slate-500">Tích lũy 320 điểm sau các lần cứu hộ</p>
           </div>
           <button
             type="button"
             onClick={onClose}
             aria-label="Đóng"
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200"
+            className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
-        {type === 'membership' ? (
-          <div className="mt-4 space-y-3">
-            <div className="rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 p-4 text-white shadow-md">
-              <div className="flex items-center justify-between">
-                <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-[10.5px] font-extrabold uppercase tracking-wider">
-                  Active Member
-                </span>
-                <span className="text-xs font-semibold text-emerald-100">Hạn: 12/2027</span>
-              </div>
-              <h3 className="mt-2 text-lg font-black tracking-tight">MotoSOS Priority Shield</h3>
-              <p className="text-xs text-emerald-100">Bảo vệ toàn diện trên mọi nẻo đường TP.HCM</p>
+        {/* Thân Modal cuộn 60fps */}
+        <div className="flex-1 overflow-y-auto pb-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+          {/* 2. Thẻ Thành Viên Digital Bạch Kim Sang Trọng */}
+          <div className="mx-4 mt-3 rounded-2xl bg-gradient-to-br from-[#16222A] via-[#1E293B] to-[#0F3D28] text-white p-4 shadow-[0_10px_28px_rgba(15,23,42,0.18)] border border-white/10 relative overflow-hidden">
+            <div className="flex items-center justify-between">
+              <span className="bg-white/12 border border-white/15 px-2.5 py-1 rounded-full text-[11px] font-bold text-amber-200 flex items-center gap-1.5">
+                <Crown className="h-3.5 w-3.5 fill-amber-300 text-amber-300" />
+                <span>Hạng Bạch Kim</span>
+              </span>
+              <span className="text-[10.5px] font-semibold tracking-wider uppercase text-white/60">
+                MotoSOS Rewards
+              </span>
             </div>
 
-            <div className="space-y-2 pt-1">
-              {MEMBERSHIP_BENEFITS.map((b, i) => {
-                const Icon = b.icon;
-                return (
-                  <div key={i} className="flex items-start gap-3 rounded-xl border border-slate-100 bg-slate-50/70 p-3">
-                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700">
-                      <Icon className="h-4 w-4" />
-                    </span>
-                    <div>
-                      <p className="text-xs font-bold text-slate-900">{b.title}</p>
-                      <p className="text-[11px] text-slate-500">{b.desc}</p>
-                    </div>
-                  </div>
-                );
-              })}
+            <div className="mt-3.5 flex items-baseline justify-between">
+              <div className="flex items-baseline gap-1">
+                <span className="text-[26px] font-extrabold tracking-tight text-white">320</span>
+                <span className="text-[12.5px] font-medium text-white/70">/ 500 điểm</span>
+              </div>
+              <span className="text-[11px] font-semibold text-emerald-300">
+                Còn 180 điểm lên Kim Cương
+              </span>
+            </div>
+
+            {/* Thanh tiến trình mảnh mượt */}
+            <div className="mt-2 h-1.5 w-full rounded-full bg-white/15 overflow-hidden">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-amber-300 via-amber-200 to-emerald-400 transition-all duration-500"
+                style={{ width: '64%' }}
+              />
+            </div>
+
+            {/* Dòng quyền lợi tóm tắt dưới đáy thẻ */}
+            <div className="mt-3 pt-2.5 border-t border-white/10 text-[11.5px] text-white/85 flex items-center justify-between">
+              <span>Ưu đãi hiện tại: Giảm 25.000đ/chuyến</span>
+              <span className="font-bold text-amber-200">Kim Cương: Giảm 35.000đ</span>
             </div>
           </div>
-        ) : (
-          <div className="mt-4 space-y-3">
-            <div className="rounded-2xl border border-amber-200 bg-amber-50/70 p-4">
-              <div className="flex items-center gap-2">
-                <Award className="h-5 w-5 text-amber-600" />
-                <span className="text-sm font-bold text-amber-900">320 / 500 điểm</span>
-              </div>
-              <p className="mt-1 text-xs text-amber-800">
-                Còn 180 điểm nữa để thăng hạng <strong>Kim Cương</strong> và nhận ưu đãi giảm 35.000đ mọi chuyến cứu hộ.
-              </p>
-              <div className="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-amber-200/60">
-                <div className="h-full w-[64%] rounded-full bg-amber-500 transition-all duration-500" />
-              </div>
-            </div>
 
-            <div className="space-y-2">
-              {TIER_PROGRESS.map((t, idx) => (
-                <div
-                  key={idx}
-                  className={`flex items-center justify-between rounded-xl border p-2.5 text-xs ${
-                    t.isCurrent
-                      ? 'border-amber-400 bg-amber-50 font-bold text-amber-950'
-                      : t.done
-                        ? 'border-slate-100 bg-slate-50 text-slate-700'
-                        : 'border-slate-100 text-slate-400 opacity-60'
+          {/* 3. Thanh Lộ Trình 4 Hạng Tương Tác Chuẩn Grab */}
+          <div className="mx-4 mt-3.5 grid grid-cols-4 gap-1.5 p-1 rounded-2xl bg-slate-100/90">
+            {(['silver', 'gold', 'platinum', 'diamond'] as const).map((tierKey) => {
+              const tier = TIERS_DATA[tierKey];
+              const isSelected = selectedTierId === tierKey;
+              return (
+                <button
+                  key={tierKey}
+                  type="button"
+                  onClick={() => setSelectedTierId(tierKey)}
+                  className={`py-2 rounded-xl text-[11.5px] transition-all flex items-center justify-center gap-1 ${
+                    isSelected
+                      ? 'bg-white text-slate-950 font-extrabold shadow-xs'
+                      : 'text-slate-600 font-semibold hover:bg-slate-200/60'
                   }`}
                 >
-                  <div className="flex items-center gap-2">
-                    {t.done ? (
-                      <Check className="h-4 w-4 text-emerald-600" />
-                    ) : t.isCurrent ? (
-                      <Crown className="h-4 w-4 text-amber-600" />
-                    ) : (
-                      <div className="h-4 w-4 rounded-full border border-slate-300" />
-                    )}
-                    <span>{t.tier}</span>
-                  </div>
-                  <span className="font-sans text-[11px] font-semibold">{t.points}</span>
-                </div>
-              ))}
+                  {tierKey === 'silver' || tierKey === 'gold' ? (
+                    <Check className="h-3.5 w-3.5 text-[#13693E]" />
+                  ) : tierKey === 'platinum' ? (
+                    <Crown className="h-3.5 w-3.5 text-amber-500 fill-amber-500" />
+                  ) : (
+                    <Lock className="h-3 w-3 text-slate-400" />
+                  )}
+                  <span>{tier.shortName}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Bảng Chi Tiết Hạng Đang Chọn trên nền trắng phẳng */}
+          <div className="mx-4 mt-3 rounded-2xl border border-slate-100 bg-[#F9FBFA] p-3.5 divide-y divide-slate-200/60 text-xs">
+            {/* 1. Mốc điểm yêu cầu */}
+            <div className="pb-2.5 flex items-center justify-between">
+              <span className="text-slate-500 font-medium">Điểm yêu cầu:</span>
+              <div className="flex items-center gap-1.5">
+                <span className="font-extrabold text-slate-900">{activeTier.pointsRange}</span>
+                {activeTier.isCurrent ? (
+                  <span className="bg-[#E6F4EC] text-[#13693E] font-bold text-[10.5px] px-2 py-0.5 rounded-full border border-[#13693E]/20">
+                    {activeTier.statusText}
+                  </span>
+                ) : activeTier.isUnlocked ? (
+                  <span className="bg-slate-200/70 text-slate-700 font-semibold text-[10px] px-2 py-0.5 rounded-full">
+                    Đã đạt
+                  </span>
+                ) : (
+                  <span className="bg-amber-50 text-amber-800 font-bold text-[10px] px-2 py-0.5 rounded-full border border-amber-200/80">
+                    {activeTier.statusText}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* 2. Ưu đãi cứu hộ */}
+            <div className="py-2.5 flex items-center justify-between">
+              <span className="text-slate-500 font-medium">Ưu đãi cứu hộ:</span>
+              <span className="font-extrabold text-[#13693E] text-[12.5px]">{activeTier.discountLabel}</span>
+            </div>
+
+            {/* 3. Đặc quyền đi kèm */}
+            <div className="pt-2.5">
+              <span className="text-slate-500 font-medium block mb-1">Đặc quyền đi kèm:</span>
+              <p className="text-slate-700 font-semibold leading-relaxed">{activeTier.perks}</p>
             </div>
           </div>
-        )}
+        </div>
 
-        <div className="mt-4">
+        {/* 4. Chân Trang Trắng & Nút Hành Động Xanh Ngọc */}
+        <div className="p-4 bg-white border-t border-slate-100 shrink-0">
           <button
             type="button"
             onClick={onClose}
-            className="flex min-h-[42px] w-full items-center justify-center rounded-xl bg-slate-900 text-xs font-bold text-white hover:bg-slate-800 transition-colors"
+            className="w-full py-3 rounded-xl bg-[#13693E] hover:bg-[#0F5C36] text-white font-extrabold text-[13.5px] transition-colors active:scale-[0.99]"
           >
             Đóng
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
