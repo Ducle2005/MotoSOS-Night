@@ -1,34 +1,37 @@
-import { Check, Crown, Info, ShieldCheck, Sparkles, Tag, X } from 'lucide-react';
-import { useState } from 'react';
+import { Check, Crown, Info, ShieldCheck, Sparkles, Tag, UserCheck, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   MEMBERSHIP_GROUPS, MEMBERSHIP_PLANS, PROMO_PROGRAMS,
-  getActiveMembershipId, getMembershipPlan, setActiveMembershipId,
+  getActiveMembershipId, getMembershipPlan, purchaseOrSwitchMembership,
   type MembershipCardPlan, type MembershipGroup,
 } from '../data/membershipCatalog';
 import { useSmoothHorizontalWheel } from '../hooks/useSmoothHorizontalWheel';
 import { formatVnd } from '../utils/pricingAndSimLogic';
+import { MyMembershipView } from './MyMembershipView';
 
 interface MembershipHubModalProps {
   isOpen: boolean; onClose: () => void; onUsePromo?: (promoCode: string) => void;
+  initialTab?: 'my_plan' | 'cards' | 'promos'; onBookNow?: () => void;
 }
 
-export function MembershipHubModal({ isOpen, onClose, onUsePromo }: MembershipHubModalProps) {
-  const [activeTab, setActiveTab] = useState<'cards' | 'promos'>('cards');
+export function MembershipHubModal({ isOpen, onClose, onUsePromo, initialTab = 'my_plan', onBookNow }: MembershipHubModalProps) {
+  const [activeTab, setActiveTab] = useState<'my_plan' | 'cards' | 'promos'>(initialTab);
   const [selectedGroup, setSelectedGroup] = useState<MembershipGroup>('vip');
   const [currentId, setCurrentId] = useState<string>(() => getActiveMembershipId());
   const [inspectingPlan, setInspectingPlan] = useState<MembershipCardPlan | null>(null);
+
+  useEffect(() => { if (isOpen) setActiveTab(initialTab); }, [isOpen, initialTab]);
 
   const { containerRef: groupScrollRef, dragHandlers: groupDragHandlers } = useSmoothHorizontalWheel();
   const { containerRef: cardScrollRef, dragHandlers: cardDragHandlers, isDragging } = useSmoothHorizontalWheel(selectedGroup);
 
   if (!isOpen || typeof document === 'undefined') return null;
 
-  const currentPlan = getMembershipPlan(currentId);
   const visiblePlans = MEMBERSHIP_PLANS.filter((p) => p.group === selectedGroup);
 
   const handleActivate = (planId: string) => {
-    setActiveMembershipId(planId);
+    purchaseOrSwitchMembership(planId);
     setCurrentId(planId);
   };
 
@@ -58,55 +61,35 @@ export function MembershipHubModal({ isOpen, onClose, onUsePromo }: MembershipHu
           </button>
         </div>
 
-        {/* 2 Tab chuyển đổi phong cách Grab */}
-        <div className="shrink-0 px-4 pt-2.5 pb-1 bg-slate-50/60 border-b border-slate-100 flex gap-2">
+        {/* 3 Tab chuyển đổi phong cách Grab */}
+        <div className="shrink-0 px-3 pt-2.5 pb-1 bg-slate-50/60 border-b border-slate-100 flex gap-1.5">
+          <button
+            type="button" onClick={() => setActiveTab('my_plan')}
+            className={`flex-1 py-1.5 rounded-xl text-[11.5px] font-bold transition-all flex items-center justify-center gap-1 ${activeTab === 'my_plan' ? 'bg-[#13693E] text-white shadow-xs' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+          >
+            <UserCheck className="h-3.5 w-3.5" /><span>Gói của tôi</span>
+          </button>
           <button
             type="button" onClick={() => setActiveTab('cards')}
-            className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${activeTab === 'cards' ? 'bg-[#13693E] text-white shadow-xs' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+            className={`flex-1 py-1.5 rounded-xl text-[11.5px] font-bold transition-all flex items-center justify-center gap-1 ${activeTab === 'cards' ? 'bg-[#13693E] text-white shadow-xs' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}
           >
             <Sparkles className="h-3.5 w-3.5" /><span>15 Thẻ hội viên</span>
           </button>
           <button
             type="button" onClick={() => setActiveTab('promos')}
-            className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${activeTab === 'promos' ? 'bg-[#13693E] text-white shadow-xs' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+            className={`flex-1 py-1.5 rounded-xl text-[11.5px] font-bold transition-all flex items-center justify-center gap-1 ${activeTab === 'promos' ? 'bg-[#13693E] text-white shadow-xs' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}
           >
-            <Tag className="h-3.5 w-3.5" /><span>Ưu đãi minh bạch (6)</span>
+            <Tag className="h-3.5 w-3.5" /><span>Ưu đãi (6)</span>
           </button>
         </div>
 
         {/* Body Cuộn 60fps */}
         <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3.5 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-          {activeTab === 'cards' ? (
+          {activeTab === 'my_plan' ? (
+            <MyMembershipView onExplorePlans={() => setActiveTab('cards')} onBookNow={() => { onClose(); onBookNow?.(); }} />
+          ) : activeTab === 'cards' ? (
             <>
-              {/* Thẻ Digital Đang Kích Hoạt ở Đỉnh */}
-              <div className={`rounded-2xl p-4 text-white shadow-lg bg-gradient-to-br ${currentPlan.cardGradient} relative overflow-hidden`}>
-                <div className="flex items-start justify-between">
-                  <div>
-                    <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-white/20 border border-white/30">{currentPlan.badgeText}</span>
-                    <h3 className="mt-1.5 text-base font-black tracking-tight">{currentPlan.name}</h3>
-                    <p className="text-[11px] text-white/80">{currentPlan.tagline}</p>
-                  </div>
-                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-500/90 text-[10.5px] font-bold text-white shadow-xs">
-                    <Check className="h-3 w-3" /> Đang dùng
-                  </span>
-                </div>
-                <div className="mt-3 pt-2.5 border-t border-white/15 grid grid-cols-2 gap-2 text-[11px]">
-                  <div>
-                    <span className="text-white/70 block">Mức khấu trừ:</span>
-                    <strong className="text-white font-extrabold">Giảm {currentPlan.discountPercent}% • Tối đa {formatVnd(currentPlan.maxDiscountPerOrder)}</strong>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-white/70 block">Lượt ưu đãi:</span>
-                    <strong className="text-amber-300 font-extrabold">Còn {currentPlan.monthlyQuota}/{currentPlan.monthlyQuota} lượt</strong>
-                  </div>
-                </div>
-                <div className="mt-2 flex items-center justify-between text-[10.5px] text-white/90">
-                  <span className="inline-flex items-center gap-1"><ShieldCheck className="h-3 w-3 text-emerald-400" />Bảo hiểm {formatVnd(currentPlan.insuranceLimit)}</span>
-                  {currentPlan.nightFeeWaived && <span className="text-amber-300 font-bold">★ Miễn phí đêm</span>}
-                </div>
-              </div>
-
-              {/* 3 Chip Lọc Nhóm Thẻ - Lướt ngang mượt mà */}
+              {/* 3 Chip Lọc Nhóm Thẻ */}
               <div>
                 <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Chọn nhóm gói cứu hộ:</p>
                 <div ref={groupScrollRef} {...groupDragHandlers} className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none touch-pan-x cursor-grab">
@@ -124,7 +107,7 @@ export function MembershipHubModal({ isOpen, onClose, onUsePromo }: MembershipHu
               {/* Dải 5 thẻ trong nhóm lướt ngang tự do */}
               <div>
                 <div className="flex items-center justify-between text-[11px] text-slate-400 font-medium mb-1 px-0.5">
-                  <span>5 thẻ gói • Kéo chuột hoặc lăn chuột để xem</span>
+                  <span>Kéo chuột hoặc lăn chuột để xem 5 thẻ</span>
                   <span className="text-slate-500 font-semibold">{visiblePlans.length} thẻ</span>
                 </div>
                 <div
@@ -178,7 +161,7 @@ export function MembershipHubModal({ isOpen, onClose, onUsePromo }: MembershipHu
               </div>
             </>
           ) : (
-            /* Tab 2: 6 Ưu Đãi Minh Bạch */
+            /* Tab 3: 6 Ưu Đãi Minh Bạch */
             <div className="divide-y divide-slate-100 rounded-2xl border border-slate-200/90 bg-white overflow-hidden shadow-xs">
               {PROMO_PROGRAMS.map((promo) => (
                 <div key={promo.code} className="p-3.5 flex items-center justify-between gap-3 hover:bg-slate-50/60 transition-colors">

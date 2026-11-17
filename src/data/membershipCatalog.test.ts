@@ -5,7 +5,10 @@ import {
   MEMBERSHIP_PLANS,
   PROMO_PROGRAMS,
   getActiveMembershipId,
+  getActivePurchasedMembership,
   getMembershipPlan,
+  getPurchasedMemberships,
+  purchaseOrSwitchMembership,
   setActiveMembershipId,
 } from './membershipCatalog';
 
@@ -68,5 +71,33 @@ describe('membershipCatalog 15 Cards & Promos Data Integrity', () => {
     assert.equal(plan.id, 'priority_247');
     const emptyPlan = getMembershipPlan('');
     assert.equal(emptyPlan.id, 'priority_247');
+  });
+
+  test('purchased memberships defaults to priority_247 with valid quota and card number', () => {
+    const list = getPurchasedMemberships();
+    assert.ok(list.length >= 1);
+    const active = getActivePurchasedMembership();
+    assert.equal(active.record.id, 'priority_247');
+    assert.equal(active.record.status, 'active');
+    assert.equal(active.record.cardNumber, 'MS-VIP-8429');
+    assert.equal(active.record.remainingQuota, 4);
+    assert.equal(active.record.totalQuota, 4);
+    assert.equal(active.record.savedAmount, 65000);
+  });
+
+  test('purchaseOrSwitchMembership activates target plan and syncs active status', () => {
+    purchaseOrSwitchMembership('ev_hybrid');
+    const active = getActivePurchasedMembership();
+    assert.equal(active.record.id, 'ev_hybrid');
+    assert.equal(active.record.status, 'active');
+    assert.equal(active.plan.name, 'Xe Điện & Hybrid');
+    assert.equal(active.record.totalQuota, 3);
+    assert.equal(active.record.remainingQuota, 3);
+
+    // Switch back to priority_247
+    purchaseOrSwitchMembership('priority_247');
+    const restored = getActivePurchasedMembership();
+    assert.equal(restored.record.id, 'priority_247');
+    assert.equal(restored.record.status, 'active');
   });
 });

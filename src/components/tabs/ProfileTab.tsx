@@ -123,6 +123,7 @@ export function ProfileTab({
       {/* Modals & Drawers */}
       <MembershipHubModal
         isOpen={isMembershipHubOpen}
+        initialTab="my_plan"
         onClose={() => setIsMembershipHubOpen(false)}
       />
       <TermsOfServiceModal

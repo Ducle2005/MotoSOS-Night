@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Bell, Crown, ScanLine, Search, User } from 'lucide-react';
 import { useNotifications } from '../../context/NotificationContext';
 import type { CampaignBannerItem, PartnerPerkItem } from '../../data/homePromotions';
-import { getActiveMembershipId, getMembershipPlan } from '../../data/membershipCatalog';
+import { getActiveMembershipId, getActivePurchasedMembership, getMembershipPlan } from '../../data/membershipCatalog';
 import { useSmoothHorizontalWheel } from '../../hooks/useSmoothHorizontalWheel';
 import { profileRepo } from '../../repositories/storageRepository';
 import type {
@@ -43,6 +43,7 @@ export function HomeTab({
   const { unreadCount } = useNotifications();
   const { containerRef: discountScrollRef, ...discountWheelProps } = useSmoothHorizontalWheel(activeLocation.address);
   const [isMembershipModalOpen, setIsMembershipModalOpen] = useState(false);
+  const [membershipModalTab, setMembershipModalTab] = useState<'my_plan' | 'cards' | 'promos'>('my_plan');
   const [membershipId, setMembershipId] = useState(() => getActiveMembershipId());
 
   useEffect(() => {
@@ -52,6 +53,7 @@ export function HomeTab({
     return () => { window.removeEventListener('motosos_membership_changed', onMemChanged); window.removeEventListener('storage', onMemChanged); };
   }, []);
   const currentPlan = getMembershipPlan(membershipId);
+  const activePurchased = getActivePurchasedMembership();
 
   useEffect(() => { if (discountScrollRef.current) discountScrollRef.current.scrollLeft = 0; }, [discountScrollRef, activeLocation.address]);
 
@@ -60,22 +62,23 @@ export function HomeTab({
   const emergencyContact = profileRepo.getEmergencyContact();
   const bikeLabel = profile.licensePlate || profile.bikeModel || 'Chưa thêm xe';
 
+  const openMembershipTab = (tab: 'my_plan' | 'cards' | 'promos') => {
+    setMembershipModalTab(tab);
+    setIsMembershipModalOpen(true);
+  };
+
   return (
     <div className="relative flex-1 min-h-full bg-[#F5F7F6] flex flex-col pb-16 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
       {/* Header Xanh Ngọc Lục Bảo (#13693E) */}
       <header className="relative bg-[#13693E] text-white pt-2.5 pb-5 px-4 shrink-0 rounded-b-[24px]">
-        {/* Hàng tiện ích phụ: MotoSOS, VIP, 4G, Bell, Test thợ, App Thợ */}
         <div className="flex items-center justify-between gap-1.5 pb-2">
           <div className="flex items-center gap-1.5 min-w-0">
             <h1 className="text-[16px] font-black tracking-tight text-white flex items-center gap-1">MotoSOS</h1>
             <button
-              type="button"
-              onClick={() => setIsMembershipModalOpen(true)}
-              aria-label="Xem thẻ hội viên"
+              type="button" onClick={() => openMembershipTab('my_plan')} aria-label="Xem thẻ hội viên"
               className="inline-flex items-center gap-1 rounded-full border border-amber-300/40 bg-amber-400/20 px-1.5 py-0.5 text-[9px] font-bold text-amber-200 shadow-xs whitespace-nowrap hover:bg-amber-400/30 active:scale-95 transition-all"
             >
-              <Crown className="h-2.5 w-2.5 text-amber-300" aria-hidden="true" />
-              <span>{currentPlan.name}</span>
+              <Crown className="h-2.5 w-2.5 text-amber-300" aria-hidden="true" /><span>{currentPlan.name}</span>
             </button>
           </div>
 
@@ -83,39 +86,24 @@ export function HomeTab({
             {onToggleOffline && (
               <button
                 type="button" onClick={onToggleOffline} data-testid="home-network-status-btn" aria-label={isOffline ? 'Offline' : '4G'}
-                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold transition-all active:scale-95 ${
-                  isOffline ? 'bg-amber-400/25 border border-amber-300 text-amber-200' : 'bg-white/15 hover:bg-white/25 text-white'
-                }`}
+                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold transition-all active:scale-95 ${isOffline ? 'bg-amber-400/25 border border-amber-300 text-amber-200' : 'bg-white/15 hover:bg-white/25 text-white'}`}
               >
                 <span className={`h-1.5 w-1.5 rounded-full ${isOffline ? 'bg-amber-400 animate-ping' : 'bg-emerald-300'}`} />
                 <span>{isOffline ? 'Offline' : '4G'}</span>
               </button>
             )}
-
             <button
               type="button" onClick={onOpenNotifications} data-testid="header-bell-btn" aria-label="Mở thông báo"
               className="relative w-6.5 h-6.5 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center text-white transition-transform active:scale-95"
             >
               <Bell className="w-3.5 h-3.5" />
-              {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-rose-500 px-0.5 text-[8.5px] font-black text-white ring-1 ring-[#13693E]">
-                  {unreadCount}
-                </span>
-              )}
+              {unreadCount > 0 && <span className="absolute -top-1 -right-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-rose-500 px-0.5 text-[8.5px] font-black text-white ring-1 ring-[#13693E]">{unreadCount}</span>}
             </button>
-
-            <button
-              type="button" onClick={onTriggerDemoMechanic} data-testid="header-demo-mechanic-btn"
-              className="rounded-full bg-white/15 hover:bg-white/25 px-2 py-0.5 text-[10px] font-bold text-white whitespace-nowrap active:scale-95 transition-all"
-            >
+            <button type="button" onClick={onTriggerDemoMechanic} data-testid="header-demo-mechanic-btn" className="rounded-full bg-white/15 hover:bg-white/25 px-2 py-0.5 text-[10px] font-bold text-white whitespace-nowrap active:scale-95 transition-all">
               Test thợ
             </button>
-
             {onOpenMechanicDriver && (
-              <button
-                type="button" onClick={onOpenMechanicDriver} data-testid="header-mechanic-driver-btn"
-                className="rounded-full bg-white/15 hover:bg-white/25 px-2 py-0.5 text-[10px] font-bold text-white whitespace-nowrap active:scale-95 transition-all"
-              >
+              <button type="button" onClick={onOpenMechanicDriver} data-testid="header-mechanic-driver-btn" className="rounded-full bg-white/15 hover:bg-white/25 px-2 py-0.5 text-[10px] font-bold text-white whitespace-nowrap active:scale-95 transition-all">
                 App Thợ
               </button>
             )}
@@ -124,38 +112,19 @@ export function HomeTab({
 
         {/* Hàng 1: [Scan] [Tìm địa điểm cứu hộ] [Avatar] */}
         <div className="flex items-center gap-2.5">
-          <button
-            type="button"
-            onClick={onResetGps}
-            aria-label="Quét hoặc lấy lại vị trí GPS"
-            className="w-10 h-10 rounded-[14px] bg-white/15 hover:bg-white/25 flex items-center justify-center shrink-0 text-white transition-all active:scale-95 cursor-pointer shadow-xs"
-          >
+          <button type="button" onClick={onResetGps} aria-label="Quét hoặc lấy lại vị trí GPS" className="w-10 h-10 rounded-[14px] bg-white/15 hover:bg-white/25 flex items-center justify-center shrink-0 text-white transition-all active:scale-95 cursor-pointer shadow-xs">
             <ScanLine className="w-5 h-5 text-white" />
           </button>
-
-          <div
-            onClick={onOpenLocationSearch}
-            className="h-10 rounded-full bg-white text-slate-800 px-3.5 flex items-center gap-2 flex-1 shadow-xs cursor-pointer hover:bg-slate-50 transition-colors active:scale-[0.99]"
-          >
-            <Search className="w-4 h-4 text-slate-400 shrink-0" />
-            <span className="text-[13px] font-medium text-slate-400 select-none truncate">Tìm địa điểm cứu hộ</span>
+          <div onClick={onOpenLocationSearch} className="h-10 rounded-full bg-white text-slate-800 px-3.5 flex items-center gap-2 flex-1 shadow-xs cursor-pointer hover:bg-slate-50 transition-colors active:scale-[0.99]">
+            <Search className="w-4 h-4 text-slate-400 shrink-0" /><span className="text-[13px] font-medium text-slate-400 select-none truncate">Tìm địa điểm cứu hộ</span>
           </div>
-
-          <button
-            type="button"
-            onClick={onNavigateToProfile}
-            aria-label="Tài khoản cá nhân"
-            className="w-10 h-10 rounded-full bg-white flex items-center justify-center shrink-0 shadow-xs cursor-pointer hover:bg-slate-100 transition-all active:scale-95 text-[#13693E]"
-          >
+          <button type="button" onClick={onNavigateToProfile} aria-label="Tài khoản cá nhân" className="w-10 h-10 rounded-full bg-white flex items-center justify-center shrink-0 shadow-xs cursor-pointer hover:bg-slate-100 transition-all active:scale-95 text-[#13693E]">
             <User className="w-5 h-5 text-[#13693E]" />
           </button>
         </div>
 
         {/* Hàng 2: ● Điểm đón: <Địa chỉ> */}
-        <div
-          onClick={onOpenLocationSearch}
-          className="mt-2.5 px-1 flex items-center gap-1.5 cursor-pointer active:opacity-80 transition-opacity"
-        >
+        <div onClick={onOpenLocationSearch} className="mt-2.5 px-1 flex items-center gap-1.5 cursor-pointer active:opacity-80 transition-opacity">
           <span className="h-2 w-2 rounded-full bg-emerald-400 shrink-0 animate-pulse" />
           <span className="text-[12px] font-medium text-white/85 shrink-0">Điểm đón:</span>
           <span className="text-[12px] font-bold text-white truncate max-w-[280px]">{heroAddressLabel}</span>
@@ -170,22 +139,39 @@ export function HomeTab({
       )}
 
       {/* Khối Trắng 8 Chức Năng Cứu Hộ & Tiện Ích */}
-      <div className={`bg-white rounded-t-[22px] pt-3.5 pb-3 px-4 shadow-[0_-4px_16px_rgba(0,0,0,0.04)] ${activeRescue ? 'mt-0' : '-mt-3.5'}`}>
+      <div className={`bg-white rounded-t-[22px] pt-3.5 pb-2.5 px-4 shadow-[0_-4px_16px_rgba(0,0,0,0.04)] ${activeRescue ? 'mt-0' : '-mt-3.5'}`}>
         <HomeActionGrid
           onQuickIssueSelect={onQuickIssueSelect} onQuickCategorySelect={onQuickCategorySelect}
           onQuickSosSelect={onQuickSosSelect} onOpenAiChat={onOpenAiChat} onOpenOffers={() => onQuickIssueSelect('out_of_fuel')}
         />
+
+        {/* Thanh Gói Hội Viên GrabUnlimited */}
+        <div
+          onClick={() => openMembershipTab('my_plan')}
+          className="mt-2.5 px-3.5 py-2.5 rounded-2xl bg-[#F4F8F6] hover:bg-[#E6F4EC] border border-emerald-600/15 flex items-center justify-between gap-2 transition-colors cursor-pointer active:scale-[0.99]"
+        >
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-[#13693E]/10 text-[#13693E] shrink-0">
+              <Crown className="h-3.5 w-3.5 fill-[#13693E]" />
+            </span>
+            <div className="truncate">
+              <span className="text-[12.5px] font-extrabold text-slate-950">Gói {currentPlan.name}</span>
+              <span className="text-[11.5px] text-slate-600 ml-1.5 truncate">
+                • Còn {activePurchased.record.remainingQuota} lượt giảm {currentPlan.discountPercent}%
+              </span>
+            </div>
+          </div>
+          <span className="text-[11.5px] font-bold text-[#13693E] shrink-0">Quyền lợi ›</span>
+        </div>
       </div>
 
       {/* Thân Trang Tối Giản Thoáng Mắt */}
       <div className="px-4 pt-2.5 space-y-3">
-        {/* Thanh Tóm Tắt Thông Tin Siêu Mảnh */}
         <div onClick={onNavigateToProfile} className="rounded-xl bg-[#F4F7F5] border border-slate-200/50 px-3.5 py-2.5 flex items-center justify-between text-[11px] text-slate-600 cursor-pointer hover:bg-[#EAF0EC] transition-colors shadow-2xs">
           <span className="truncate">Xe: <strong className="font-extrabold text-slate-800">{bikeLabel}</strong> • Khẩn cấp: <strong className="font-extrabold text-slate-800">{emergencyContact || 'Chưa thiết lập'}</strong></span>
           <span className="font-bold text-[#13693E] shrink-0 ml-2">Thiết lập ›</span>
         </div>
 
-        {/* Banner Gọi Thợ Ngay — Chỉ hiện khi chưa có chuyến cứu hộ */}
         {!activeRescue && (
           <div
             onClick={onCallMechanicNow}
@@ -198,7 +184,6 @@ export function HomeTab({
               </div>
               <p className="text-[11.5px] font-medium text-slate-700 leading-snug mt-0.5">Thợ sửa xe gần bạn, có mặt trong vài phút</p>
             </div>
-
             <div className="w-20 h-20 rounded-full bg-[#13693E]/12 absolute -right-2 -bottom-3 flex items-center justify-center pointer-events-none">
               <svg className="h-12 w-14 text-[#13693E]" viewBox="0 0 80 50" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="18" cy="35" r="11" strokeWidth="4.5" /><circle cx="62" cy="35" r="11" strokeWidth="4.5" />
@@ -209,12 +194,10 @@ export function HomeTab({
           </div>
         )}
 
-        {/* Dải Thẻ Ưu Đãi — Nền Trắng Viền Xanh Ngọc Mảnh (Zero-Lag 120fps) */}
         <div ref={discountScrollRef} {...discountWheelProps.dragHandlers} className="-mx-4 px-4 flex items-stretch justify-start gap-2.5 overflow-x-auto [&::-webkit-scrollbar]:hidden will-change-scroll [contain:paint]">
           {DISCOUNT_CARDS.map((card) => (
             <div
-              key={card.id}
-              onClick={() => onSelectPartnerPerk({ id: card.id, title: card.title, voucherId: card.code, description: card.title, imageUrl: '', fallbackGradient: '' })}
+              key={card.id} onClick={() => onSelectPartnerPerk({ id: card.id, title: card.title, voucherId: card.code, description: card.title, imageUrl: '', fallbackGradient: '' })}
               className="w-[165px] shrink-0 rounded-2xl bg-white border border-emerald-600/20 p-3 shadow-2xs flex flex-col justify-between cursor-pointer hover:border-emerald-500/50 hover:bg-emerald-50/20 active:scale-[0.99] transition-colors"
             >
               <div>
@@ -226,7 +209,6 @@ export function HomeTab({
           ))}
         </div>
 
-        {/* 1 Mục Duy Nhất Có Tab Lọc: Điểm Hỗ Trợ An Toàn Gần Bạn */}
         <HomeNearbyPlacesSections
           originCoord={{ lat: activeLocation.lat, lng: activeLocation.lng }} activeAddress={activeLocation.address}
           stations={stations} policeStations={policeStations} gasStations={gasStations} openRepairShops={openRepairShops}
@@ -235,7 +217,10 @@ export function HomeTab({
         />
       </div>
 
-      <MembershipHubModal isOpen={isMembershipModalOpen} onClose={() => setIsMembershipModalOpen(false)} />
+      <MembershipHubModal
+        isOpen={isMembershipModalOpen} initialTab={membershipModalTab}
+        onBookNow={onCallMechanicNow} onClose={() => setIsMembershipModalOpen(false)}
+      />
     </div>
   );
 }
