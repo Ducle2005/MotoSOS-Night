@@ -68,7 +68,7 @@ export function ensureRescueRouteLayers(map: MapLibreMap): void {
     map.addLayer({
       id: USER_SAFEHAVEN_CASING_LAYER_ID, type: 'line', source: USER_SAFEHAVEN_SOURCE_ID,
       layout: { 'line-join': 'round', 'line-cap': 'round' },
-      paint: { 'line-color': '#ffffff', 'line-width': 7.5, 'line-opacity': 0.98 },
+      paint: { 'line-color': '#ffffff', 'line-width': 5.5, 'line-opacity': 0.95 },
     });
   }
   if (!map.getLayer(USER_SAFEHAVEN_LINE_LAYER_ID)) {
@@ -77,8 +77,8 @@ export function ensureRescueRouteLayers(map: MapLibreMap): void {
       layout: { 'line-join': 'round', 'line-cap': 'round' },
       paint: {
         'line-color': '#0284C7',
-        'line-width': 4.5,
-        'line-dasharray': [2, 1.3],
+        'line-width': 3.5,
+        'line-dasharray': [1.6, 1.3],
         'line-opacity': 1,
       },
     });

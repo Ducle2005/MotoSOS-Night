@@ -67,20 +67,20 @@ export function BottomSheetShell({
             : 'rounded-t-3xl border-t border-slate-100 bg-white shadow-[0_-8px_30px_rgba(0,0,0,0.08)]'
       }`}
     >
-      {/* Floating slot (e.g. UserSafeRouteBanner) & Recenter button above Bottom Sheet */}
+      {/* Recenter button & Floating slot (UserSafeRouteBanner) above Bottom Sheet */}
       <div className="pointer-events-none absolute inset-x-0 bottom-full z-30 flex flex-col">
-        {floatingTopSlot}
-        <div className="flex justify-end px-4 mb-3">
+        <div className="flex justify-end px-4 mb-2">
           <button
             type="button"
             onClick={onRecenter}
             aria-label="Về vị trí của tôi"
             title="Về vị trí của tôi"
-            className="pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full border border-slate-200/90 bg-white text-emerald-600 shadow-lg shadow-slate-900/10 transition-all hover:border-emerald-400 hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 active:scale-95"
+            className="pointer-events-auto flex h-9 w-9 items-center justify-center rounded-full border border-slate-200/90 bg-white text-emerald-600 shadow-md transition-all hover:border-emerald-400 hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 active:scale-95"
           >
-            <LocateFixed className="h-5 w-5" aria-hidden="true" />
+            <LocateFixed className="h-4 w-4" aria-hidden="true" />
           </button>
         </div>
+        {floatingTopSlot}
       </div>
 
       {/* Drag handle & Header logic */}

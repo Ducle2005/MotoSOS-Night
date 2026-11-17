@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { X } from 'lucide-react';
 import { MOCK_MECHANIC, QUICK_CHAT_SUGGESTIONS, VOUCHER_OPTIONS } from '../../data/mockRescueData';
 import type { RouteSummaryInfo } from '../../hooks/useActivePlaceInspect';
 import type { ChatMessage, GasStation, GeoCoord, GeoJsonLineString, InspectedPlace, IssueType, MapLayerFilter, OrderPricing, PickupMode, PoliceStation, RepairShop, RescueStep, SafeStation, ScopeApprovalItem, SelectedDestination, TrackingStatus, UserLocation, VoucherId } from '../../types/rescue';
@@ -84,21 +83,6 @@ export function MapTabView(props: MapTabViewProps) {
         onPinMoveStart={props.pinPicker.onMoveStart} onPinMoveEnd={props.pinPicker.onMoveEnd} onEtaMinuteChange={props.onEtaMinuteChange}
         onMechanicApproaching={props.onMechanicApproaching} onMechanicArrived={props.onMechanicArrived}
       />
-
-      {/* Nút Tắt đường đi nhanh khi có tuyến đường hiển thị (ngoài Bước 3/3) */}
-      {(props.activeRouteGeoJson || props.inspectRoute) && step !== 'tracking' && (
-        <div className="pointer-events-none absolute top-16 inset-x-0 z-30 flex justify-center">
-          <button
-            type="button"
-            onClick={props.onClearActiveRoute || props.onClearInspection}
-            data-testid="clear-active-route-btn"
-            className="pointer-events-auto inline-flex items-center gap-1.5 rounded-full border border-slate-200/90 bg-white/95 px-3.5 py-1 text-xs font-bold text-slate-800 shadow-md transition-all hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600 active:scale-95"
-          >
-            <X className="h-3.5 w-3.5 text-rose-500" aria-hidden="true" />
-            <span>Tắt đường đi</span>
-          </button>
-        </div>
-      )}
 
       <TopOverlayBar
         step={step} trackingStatus={trackingStatus} isOffline={isOffline}
