@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { ActiveRescueInfo, GeoCoord, MechanicInfo } from '../types/rescue';
 import { computeHaversineMeters } from '../utils/rescueLogic';
+import { buildSosSharePayload, getExactUserCoordinates, shareViaZalo } from '../utils/sosLocationShare';
 
 export type SupportIssueType = 'not_arrived' | 'wrong_vehicle' | 'overcharge' | 'force_cancel';
 
@@ -66,12 +67,13 @@ export function RescueSupportModal({
     setIsSubmitted(true);
   };
 
-  const handleZalo = () => {
+  const handleZalo = async () => {
     if (onShareZalo) return onShareZalo();
-    const loc = pickupCoord || userCoord;
-    const msg = `[MotoSOS] Định vị hỗ trợ khẩn cấp: ${loc ? `https://maps.google.com/?q=${loc.lat},${loc.lng}` : 'Điểm đón'}`;
-    if (navigator.clipboard) navigator.clipboard.writeText(msg).catch(() => {});
-    window.open('https://zalo.me/', '_blank', 'noopener,noreferrer');
+    const loc = await getExactUserCoordinates(pickupCoord || userCoord);
+    const payload = buildSosSharePayload({
+      location: loc, address: loc.address, activeRescue,
+    });
+    await shareViaZalo('', payload);
   };
 
   const modalBody = (

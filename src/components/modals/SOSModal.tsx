@@ -1,7 +1,13 @@
-import { AlertTriangle, Copy, ExternalLink, MapPin, Send, ShieldAlert, X } from 'lucide-react';
+import { AlertTriangle, Copy, MapPin, MessageCircle, Send, ShieldAlert, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useState } from 'react';
 import type { ActiveLocation } from '../../types/rescue';
+import {
+  buildSosSharePayload,
+  copyTextSafely,
+  shareViaMessenger,
+  shareViaZalo,
+} from '../../utils/sosLocationShare';
 
 interface SOSModalProps {
   isOpen: boolean;
@@ -19,31 +25,36 @@ export function SOSModal({
   onClose,
 }: SOSModalProps) {
   const [copied, setCopied] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
   const lat = activeLocation.lat;
   const lng = activeLocation.lng;
-  const mapsUrl = `https://maps.google.com/?q=${lat.toFixed(5)},${lng.toFixed(5)}`;
-  const sosMessage = `[CẦN HỖ TRỢ KHẨN CẤP] Xe mình gặp sự cố ban đêm tại: ${activeLocation.address}. Định vị GPS: ${mapsUrl}`;
 
-  const handleShareZalo = () => {
-    const cleanPhone = savedPhone ? savedPhone.replace(/\D/g, '') : '';
-    const zaloUrl = cleanPhone
-      ? `https://zalo.me/${cleanPhone}`
-      : `https://zalo.me/`;
-    // Copy the SOS message and navigate to Zalo
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(sosMessage).catch(() => {});
-    }
-    setCopied(true);
-    window.open(zaloUrl, '_blank', 'noopener,noreferrer');
-    setTimeout(() => setCopied(false), 3000);
+  const getPayload = () => buildSosSharePayload({
+    location: activeLocation,
+    address: activeLocation.address,
+  });
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3000);
   };
 
-  const handleCopyLocation = () => {
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(sosMessage).catch(() => {});
+  const handleShareZalo = async () => {
+    const res = await shareViaZalo(savedPhone || '', getPayload());
+    showToast(res.message);
+  };
+
+  const handleShareMessenger = async () => {
+    const res = await shareViaMessenger(getPayload());
+    showToast(res.message);
+  };
+
+  const handleCopyLocation = async () => {
+    const success = await copyTextSafely(getPayload().text);
+    if (success) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
@@ -116,16 +127,36 @@ export function SOSModal({
             </div>
           </div>
 
+          {/* Toast thông báo */}
+          {toastMessage && (
+            <div className="mt-2.5 p-2 rounded-xl bg-emerald-50 border border-emerald-200 text-xs font-bold text-emerald-800 text-center animate-in fade-in duration-150">
+              {toastMessage}
+            </div>
+          )}
+
           {/* Actions */}
           <div className="mt-4 space-y-2.5">
-            <button
-              type="button"
-              onClick={handleShareZalo}
-              className="flex min-h-[46px] w-full items-center justify-center gap-2 rounded-xl bg-[#0068FF] px-4 text-xs font-bold text-white shadow-md shadow-blue-500/20 hover:bg-blue-600 active:scale-[0.99] transition-all"
-            >
-              <Send className="h-4 w-4" aria-hidden="true" />
-              <span>Gửi định vị qua Zalo {savedPhone ? `cho ${savedPhone}` : ''}</span>
-            </button>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={handleShareZalo}
+                data-testid="sos-modal-zalo-btn"
+                className="flex min-h-[46px] items-center justify-center gap-1.5 rounded-xl bg-[#0068FF] px-3 text-xs font-bold text-white shadow-md shadow-blue-500/20 hover:bg-blue-600 active:scale-[0.99] transition-all"
+              >
+                <Send className="h-3.5 w-3.5" aria-hidden="true" />
+                <span>Gửi Zalo {savedPhone ? `(${savedPhone.slice(-4)})` : ''}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleShareMessenger}
+                data-testid="sos-modal-messenger-btn"
+                className="flex min-h-[46px] items-center justify-center gap-1.5 rounded-xl bg-[#0084FF] px-3 text-xs font-bold text-white shadow-md shadow-sky-500/20 hover:bg-sky-600 active:scale-[0.99] transition-all"
+              >
+                <MessageCircle className="h-3.5 w-3.5" aria-hidden="true" />
+                <span>Gửi Messenger</span>
+              </button>
+            </div>
 
             <button
               type="button"

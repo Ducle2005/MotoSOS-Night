@@ -6,6 +6,7 @@ import {
   type SavedAddressItem, type UserProfileData,
 } from '../../types/profile';
 import { calculateHistoryStats, loadRescueHistory } from '../../utils/rescueHistoryLogic';
+import type { ActiveLocation, ActiveRescueInfo } from '../../types/rescue';
 import { EmergencyContactModal } from '../profile/EmergencyContactModal';
 import { MemberBenefitModal } from '../profile/MemberBenefitModal';
 import { MyVehicleModal } from '../profile/MyVehicleModal';
@@ -22,6 +23,8 @@ interface ProfileTabProps {
   onOpenNotifications: () => void;
   onSelectSavedAddressToMap?: (addr: SavedAddressItem) => void;
   onTriggerSos?: (phone: string) => void;
+  activeLocation?: ActiveLocation | null;
+  activeRescue?: ActiveRescueInfo | null;
 }
 
 export function ProfileTab({
@@ -29,6 +32,8 @@ export function ProfileTab({
   onOpenNotifications,
   onSelectSavedAddressToMap,
   onTriggerSos,
+  activeLocation,
+  activeRescue,
 }: ProfileTabProps) {
   const [profile, setProfile] = useState<UserProfileData>(DEFAULT_USER_PROFILE);
   const [savedAddresses, setSavedAddresses] = useState<SavedAddressItem[]>(DEFAULT_SAVED_ADDRESSES);
@@ -130,6 +135,8 @@ export function ProfileTab({
         isOpen={isSosOpen}
         onClose={() => setIsSosOpen(false)}
         onTriggerSos={onTriggerSos}
+        activeLocation={activeLocation}
+        activeRescue={activeRescue}
       />
 
       <MemberBenefitModal

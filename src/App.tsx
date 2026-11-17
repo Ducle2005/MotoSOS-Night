@@ -196,6 +196,7 @@ export default function App() {
           {s.activeTab === 'profile' && (
             <ProfileTab
               onNavigateToActivity={() => s.setActiveTab('activity')} onOpenNotifications={() => setIsNotificationCenterOpen(true)}
+              activeLocation={s.geo.activeLocation} activeRescue={activeRescue}
               onSelectSavedAddressToMap={(addr) => {
                 s.handleSelectSearchLocation({
                   id: addr.id, addressLine1: addr.label, addressLine2: addr.address,
