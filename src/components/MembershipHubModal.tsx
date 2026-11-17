@@ -2,13 +2,14 @@ import { Check, Crown, Info, Sparkles, Tag, UserCheck, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  MEMBERSHIP_GROUPS, MEMBERSHIP_PLANS, PROMO_PROGRAMS,
-  getActiveMembershipId, getMembershipPlan, purchaseOrSwitchMembership,
+  MEMBERSHIP_GROUPS, MEMBERSHIP_PLANS,
+  getActiveMembershipId, purchaseOrSwitchMembership,
   type MembershipCardPlan, type MembershipGroup,
 } from '../data/membershipCatalog';
 import { useSmoothHorizontalWheel } from '../hooks/useSmoothHorizontalWheel';
 import { formatVnd } from '../utils/pricingAndSimLogic';
 import { MyMembershipView } from './MyMembershipView';
+import { PromoCarouselTab } from './PromoCarouselTab';
 
 interface MembershipHubModalProps {
   isOpen: boolean; onClose: () => void; onUsePromo?: (promoCode: string) => void;
@@ -174,28 +175,7 @@ export function MembershipHubModal({ isOpen, onClose, onUsePromo, initialTab = '
               </div>
             </>
           ) : (
-            /* Tab 3: 6 Ưu Đãi Minh Bạch */
-            <div className="divide-y divide-slate-100 rounded-2xl border border-slate-200/90 bg-white overflow-hidden shadow-xs">
-              {PROMO_PROGRAMS.map((promo) => (
-                <div key={promo.code} className="p-3.5 flex items-center justify-between gap-3 hover:bg-slate-50/60 transition-colors">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-mono font-bold text-xs text-[#13693E] bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">{promo.code}</span>
-                      <span className="text-[11px] font-extrabold text-amber-600">Giảm {formatVnd(promo.discountAmount)}</span>
-                    </div>
-                    <h4 className="text-[13px] font-bold text-slate-900 mt-1">{promo.title}</h4>
-                    <p className="text-[11px] text-slate-500 mt-0.5 leading-tight">{promo.condition}</p>
-                    <p className="text-[10px] text-emerald-700 font-semibold mt-1">Áp dụng: {promo.eligibleTiers}</p>
-                  </div>
-                  <button
-                    type="button" onClick={() => { if (onUsePromo) onUsePromo(promo.code); onClose(); }}
-                    className="shrink-0 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-[#13693E] text-white text-xs font-bold shadow-xs active:scale-95 transition-colors"
-                  >
-                    Dùng ngay
-                  </button>
-                </div>
-              ))}
-            </div>
+            <PromoCarouselTab onUsePromo={onUsePromo} onClose={onClose} />
           )}
         </div>
 
