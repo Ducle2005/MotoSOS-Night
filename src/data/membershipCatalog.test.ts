@@ -9,14 +9,26 @@ import {
   setActiveMembershipId,
 } from './membershipCatalog';
 
-describe('membershipCatalog 20 Cards & Promos Data Integrity', () => {
-  test('has exactly 20 membership plans divided into 4 groups with 5 cards each', () => {
-    assert.equal(MEMBERSHIP_PLANS.length, 20);
-    assert.equal(MEMBERSHIP_GROUPS.length, 4);
+describe('membershipCatalog 15 Cards & Promos Data Integrity', () => {
+  test('has exactly 15 membership plans divided into 3 groups with 5 cards each', () => {
+    assert.equal(MEMBERSHIP_PLANS.length, 15);
+    assert.equal(MEMBERSHIP_GROUPS.length, 3);
+
+    const groupIds = MEMBERSHIP_GROUPS.map((g) => g.id);
+    assert.deepEqual(groupIds, ['daily', 'pro', 'vip']);
 
     MEMBERSHIP_GROUPS.forEach((group) => {
       const cardsInGroup = MEMBERSHIP_PLANS.filter((p) => p.group === group.id);
       assert.equal(cardsInGroup.length, 5, `Group ${group.id} must have exactly 5 cards`);
+    });
+  });
+
+  test('driver group is completely removed and old driver IDs fallback to priority_247', () => {
+    const driverIds = ['driver_day', 'driver_night', 'shipper_express', 'driver_pro_quarter', 'street_god_year'];
+    driverIds.forEach((id) => {
+      assert.ok(!MEMBERSHIP_PLANS.some((p) => p.id === id), `Driver plan ${id} must not exist`);
+      const fallback = getMembershipPlan(id);
+      assert.equal(fallback.id, 'priority_247');
     });
   });
 
@@ -51,8 +63,10 @@ describe('membershipCatalog 20 Cards & Promos Data Integrity', () => {
     assert.deepEqual(codes, ['BANMOI25', 'ANTOAN20', 'DEMKHUYA15', 'VIP50K', 'FREEDEM', 'MUAANHTHAN']);
   });
 
-  test('fallback returns priority_247 plan if id is invalid', () => {
+  test('fallback returns priority_247 plan if id is invalid or empty', () => {
     const plan = getMembershipPlan('non_existent_id');
     assert.equal(plan.id, 'priority_247');
+    const emptyPlan = getMembershipPlan('');
+    assert.equal(emptyPlan.id, 'priority_247');
   });
 });

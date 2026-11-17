@@ -1,4 +1,4 @@
-export type MembershipGroup = 'daily' | 'driver' | 'pro' | 'vip';
+export type MembershipGroup = 'daily' | 'pro' | 'vip';
 export type BillingCycle = '/tuần' | '/tháng' | '/3 tháng' | '/năm' | '/15 ngày';
 
 export interface MembershipCardPlan {
@@ -16,13 +16,12 @@ export interface PromoProgram {
 
 export const MEMBERSHIP_GROUPS: Array<{ id: MembershipGroup; label: string; count: number }> = [
   { id: 'daily', label: 'Phổ thông (5)', count: 5 },
-  { id: 'driver', label: 'Tài xế (5)', count: 5 },
   { id: 'pro', label: 'Chuyên biệt (5)', count: 5 },
   { id: 'vip', label: 'VIP & Gia đình (5)', count: 5 },
 ];
 
 export const MEMBERSHIP_PLANS: MembershipCardPlan[] = [
-  // 1. Phổ thông (daily)
+  // 1. Phổ thông (daily) - 5 thẻ
   {
     id: 'moto_lite_7d', group: 'daily', name: 'MotoLite 7 Ngày', badgeText: 'Tiện lợi',
     price: 19000, billingCycle: '/tuần', discountPercent: 15, maxDiscountPerOrder: 20000,
@@ -64,49 +63,7 @@ export const MEMBERSHIP_PLANS: MembershipCardPlan[] = [
     highlights: ['Giảm 25% (tối đa 40.000đ/ca)', '3 lượt cứu hộ/tháng', 'Bảo hiểm cứu hộ 50.000.000đ'],
   },
 
-  // 2. Tài xế (driver)
-  {
-    id: 'driver_day', group: 'driver', name: 'Tài Xế Ca Ngày', badgeText: 'Đối tác Ngày',
-    price: 119000, billingCycle: '/tháng', discountPercent: 30, maxDiscountPerOrder: 40000,
-    monthlyQuota: 4, nightFeeWaived: false, insuranceLimit: 50000000,
-    cardGradient: 'from-amber-700 via-orange-900 to-slate-950',
-    tagline: 'Đồng hành vững lái cùng tài xế công nghệ',
-    highlights: ['Giảm 30% (tối đa 40.000đ/ca)', '4 lượt cứu hộ/tháng', 'Ưu tiên kết nối thợ < 15 phút'],
-  },
-  {
-    id: 'driver_night', group: 'driver', name: 'Tài Xế Ca Đêm', badgeText: 'Miễn phí đêm',
-    price: 139000, billingCycle: '/tháng', discountPercent: 35, maxDiscountPerOrder: 45000,
-    monthlyQuota: 4, nightFeeWaived: true, insuranceLimit: 50000000,
-    cardGradient: 'from-purple-950 via-slate-900 to-black',
-    tagline: 'Cày đêm vững lái, miễn 100% phụ phí đêm',
-    highlights: ['Miễn 100% phụ phí đêm khuya (20.000đ)', 'Giảm 35% (tối đa 45.000đ/ca)', '4 lượt cứu hộ/tháng'],
-  },
-  {
-    id: 'shipper_express', group: 'driver', name: 'Shipper Siêu Tốc', badgeText: 'Giao hàng 24/7',
-    price: 159000, billingCycle: '/tháng', discountPercent: 35, maxDiscountPerOrder: 50000,
-    monthlyQuota: 5, nightFeeWaived: true, insuranceLimit: 60000000,
-    cardGradient: 'from-orange-800 via-amber-950 to-black',
-    tagline: 'Ứng cứu cấp tốc bảo vệ đơn giao hỏa tốc',
-    highlights: ['Ưu tiên điều thợ nhanh nhất', 'Giảm 35% (tối đa 50.000đ/ca)', 'Miễn 100% phụ phí đêm'],
-  },
-  {
-    id: 'driver_pro_quarter', group: 'driver', name: 'Đối Tác Bền Bỉ', badgeText: '3 Tháng',
-    price: 349000, billingCycle: '/3 tháng', discountPercent: 40, maxDiscountPerOrder: 50000,
-    monthlyQuota: 15, nightFeeWaived: true, insuranceLimit: 70000000,
-    cardGradient: 'from-cyan-900 via-blue-950 to-slate-950',
-    tagline: 'Bảo vệ dài hạn cho bác tài chuyên nghiệp',
-    highlights: ['Giảm 40% (tối đa 50.000đ/ca)', '15 lượt cứu hộ/quý', 'Miễn 100% phụ phí đêm'],
-  },
-  {
-    id: 'street_god_year', group: 'driver', name: 'Chiến Thần Đường Phố', badgeText: '1 Năm',
-    price: 990000, billingCycle: '/năm', discountPercent: 45, maxDiscountPerOrder: 60000,
-    monthlyQuota: 60, nightFeeWaived: true, insuranceLimit: 100000000,
-    cardGradient: 'from-red-900 via-amber-950 to-black',
-    tagline: 'Hạng thẻ tối thượng cho tài xế đường phố',
-    highlights: ['Giảm 45% (tối đa 60.000đ/ca)', '60 lượt cứu hộ/năm', 'Bảo hiểm tai nạn 100.000.000đ'],
-  },
-
-  // 3. Xe chuyên biệt (pro)
+  // 2. Xe chuyên biệt (pro) - 5 thẻ
   {
     id: 'ev_hybrid', group: 'pro', name: 'Xe Điện & Hybrid', badgeText: 'Green EV',
     price: 79000, billingCycle: '/tháng', discountPercent: 25, maxDiscountPerOrder: 35000,
@@ -148,7 +105,7 @@ export const MEMBERSHIP_PLANS: MembershipCardPlan[] = [
     highlights: ['Xe bán tải chở xe chuyên dụng', 'Giảm 35% (tối đa 60.000đ/ca)', 'Bảo hiểm xe 100.000.000đ'],
   },
 
-  // 4. VIP & Gia đình (vip)
+  // 3. VIP & Gia đình (vip) - 5 thẻ
   {
     id: 'priority_247', group: 'vip', name: 'Priority 24/7', badgeText: 'Mặc định VIP',
     price: 149000, billingCycle: '/tháng', discountPercent: 30, maxDiscountPerOrder: 40000,
@@ -196,7 +153,7 @@ export const PROMO_PROGRAMS: PromoProgram[] = [
   { code: 'ANTOAN20', title: 'Điểm hẹn Trạm An Toàn 24/7', discountAmount: 20000, condition: 'Chọn điểm đón tại Cửa hàng tiện lợi / Cây xăng / Đồn Công an', eligibleTiers: 'Tất cả thành viên', voucherId: 'ANTOAN20' },
   { code: 'DEMKHUYA15', title: 'Trợ giá Đêm khuya', discountAmount: 15000, condition: 'Khung giờ đêm từ 22:00 đến 06:00 sáng hôm sau', eligibleTiers: 'Tất cả thành viên', voucherId: 'DEMKHUYA15' },
   { code: 'VIP50K', title: 'Đặc quyền Hội viên VIP & Chuyên biệt', discountAmount: 50000, condition: 'Áp dụng cho các ca cứu hộ chết máy, bình điện hoặc kéo xe', eligibleTiers: 'Hạng Chuyên biệt, VIP & Gia đình' },
-  { code: 'FREEDEM', title: 'Miễn 100% Phụ phí Đêm Khuya', discountAmount: 20000, condition: 'Tự động miễn 20.000đ phụ phí đêm cho các chuyến từ 22h-5h', eligibleTiers: 'Hạng Tài xế, Chuyên biệt & VIP' },
+  { code: 'FREEDEM', title: 'Miễn 100% Phụ phí Đêm Khuya', discountAmount: 20000, condition: 'Tự động miễn 20.000đ phụ phí đêm cho các chuyến từ 22h-5h', eligibleTiers: 'Hạng Chuyên biệt & VIP' },
   { code: 'MUAANHTHAN', title: 'Vượt Mưa Ngập An Toàn', discountAmount: 20000, condition: 'Áp dụng khi xe bị ngập nước hoặc chết máy trong mùa mưa', eligibleTiers: 'Tất cả thành viên' },
 ];
 
@@ -205,7 +162,11 @@ const STORAGE_KEY = 'motosos_active_membership';
 export function getActiveMembershipId(): string {
   if (typeof window === 'undefined') return 'priority_247';
   try {
-    return localStorage.getItem(STORAGE_KEY) || 'priority_247';
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (!stored || !MEMBERSHIP_PLANS.some((p) => p.id === stored)) {
+      return 'priority_247';
+    }
+    return stored;
   } catch {
     return 'priority_247';
   }
@@ -214,8 +175,9 @@ export function getActiveMembershipId(): string {
 export function setActiveMembershipId(id: string): void {
   if (typeof window === 'undefined') return;
   try {
-    localStorage.setItem(STORAGE_KEY, id);
-    window.dispatchEvent(new CustomEvent('motosos_membership_changed', { detail: { id } }));
+    const targetId = MEMBERSHIP_PLANS.some((p) => p.id === id) ? id : 'priority_247';
+    localStorage.setItem(STORAGE_KEY, targetId);
+    window.dispatchEvent(new CustomEvent('motosos_membership_changed', { detail: { id: targetId } }));
   } catch {
     // no-op
   }
@@ -223,5 +185,9 @@ export function setActiveMembershipId(id: string): void {
 
 export function getMembershipPlan(id?: string | null): MembershipCardPlan {
   const targetId = id || getActiveMembershipId();
-  return MEMBERSHIP_PLANS.find((p) => p.id === targetId) || MEMBERSHIP_PLANS[15]; // priority_247
+  return (
+    MEMBERSHIP_PLANS.find((p) => p.id === targetId) ||
+    MEMBERSHIP_PLANS.find((p) => p.id === 'priority_247') ||
+    MEMBERSHIP_PLANS[0]
+  );
 }

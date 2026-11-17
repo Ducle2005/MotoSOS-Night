@@ -81,10 +81,7 @@ export function useSmoothHorizontalWheel(resetKey?: unknown) {
 
     el.addEventListener('wheel', onWheel, { passive: false });
     el.addEventListener('mouseenter', () => setIsHovered(true));
-    el.addEventListener('mouseleave', () => {
-      setIsHovered(false);
-      if (isPointerDownRef.current) { isPointerDownRef.current = false; setIsDragging(false); }
-    });
+    el.addEventListener('mouseleave', () => setIsHovered(false));
     return () => { el.removeEventListener('wheel', onWheel); if (ro) ro.disconnect(); stopAnimation(); };
   }, [startAnimation, stopAnimation, updateMaxScroll]);
 
@@ -92,35 +89,50 @@ export function useSmoothHorizontalWheel(resetKey?: unknown) {
     const el = containerRef.current;
     if (!el || e.button !== 0) return;
     stopAnimation();
-    isPointerDownRef.current = true; startXRef.current = e.pageX;
-    startScrollLeftRef.current = el.scrollLeft; currentScrollRef.current = el.scrollLeft;
-    targetScrollRef.current = el.scrollLeft; didDragRef.current = false;
-  };
+    isPointerDownRef.current = true;
+    startXRef.current = e.pageX;
+    startScrollLeftRef.current = el.scrollLeft;
+    currentScrollRef.current = el.scrollLeft;
+    targetScrollRef.current = el.scrollLeft;
+    didDragRef.current = false;
 
-  const onMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    const el = containerRef.current;
-    if (!isPointerDownRef.current || !el) return;
-    const dx = e.pageX - startXRef.current;
-    if (Math.abs(dx) > 4) {
-      didDragRef.current = true;
-      if (!isDragging) setIsDragging(true);
-      el.scrollLeft = startScrollLeftRef.current - dx;
-      currentScrollRef.current = el.scrollLeft; targetScrollRef.current = el.scrollLeft;
-    }
-  };
+    const onWindowMouseMove = (moveEv: MouseEvent) => {
+      if (!isPointerDownRef.current || !containerRef.current) return;
+      const dx = moveEv.pageX - startXRef.current;
+      if (!didDragRef.current && Math.abs(dx) > 6) {
+        didDragRef.current = true;
+        setIsDragging(true);
+      }
+      if (didDragRef.current && containerRef.current) {
+        stopAnimation();
+        containerRef.current.scrollLeft = startScrollLeftRef.current - dx;
+        currentScrollRef.current = containerRef.current.scrollLeft;
+        targetScrollRef.current = containerRef.current.scrollLeft;
+      }
+    };
 
-  const endDrag = () => {
-    if (!isPointerDownRef.current && !isDragging) return;
-    isPointerDownRef.current = false; setIsDragging(false);
-    window.setTimeout(() => { didDragRef.current = false; }, 0);
+    const onWindowMouseUp = () => {
+      window.removeEventListener('mousemove', onWindowMouseMove);
+      window.removeEventListener('mouseup', onWindowMouseUp);
+      isPointerDownRef.current = false;
+      setIsDragging(false);
+      setTimeout(() => { didDragRef.current = false; }, 80);
+    };
+
+    window.addEventListener('mousemove', onWindowMouseMove);
+    window.addEventListener('mouseup', onWindowMouseUp);
   };
 
   return {
     containerRef, isHovered, isDragging, resetScroll,
     dragHandlers: {
-      onMouseDown, onMouseMove, onMouseUp: endDrag,
+      onMouseDown,
       onClickCapture: (e: React.MouseEvent) => {
-        if (didDragRef.current) { e.preventDefault(); e.stopPropagation(); didDragRef.current = false; }
+        if (didDragRef.current) {
+          e.preventDefault();
+          e.stopPropagation();
+          didDragRef.current = false;
+        }
       },
       onTouchStart: () => {
         stopAnimation();
