@@ -1,4 +1,4 @@
-import { Check, Crown, Info, ShieldCheck, Sparkles, Tag, UserCheck, X } from 'lucide-react';
+import { Check, Crown, Info, Sparkles, Tag, UserCheck, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
@@ -19,12 +19,13 @@ export function MembershipHubModal({ isOpen, onClose, onUsePromo, initialTab = '
   const [activeTab, setActiveTab] = useState<'my_plan' | 'cards' | 'promos'>(initialTab);
   const [selectedGroup, setSelectedGroup] = useState<MembershipGroup>('vip');
   const [currentId, setCurrentId] = useState<string>(() => getActiveMembershipId());
+  const [currentCardIndex, setCurrentCardIndex] = useState(1);
   const [inspectingPlan, setInspectingPlan] = useState<MembershipCardPlan | null>(null);
 
   useEffect(() => { if (isOpen) setActiveTab(initialTab); }, [isOpen, initialTab]);
 
   const { containerRef: groupScrollRef, dragHandlers: groupDragHandlers } = useSmoothHorizontalWheel();
-  const { containerRef: cardScrollRef, dragHandlers: cardDragHandlers, isDragging } = useSmoothHorizontalWheel(selectedGroup);
+  const { containerRef: cardScrollRef, dragHandlers: cardDragHandlers, isDragging, resetScroll } = useSmoothHorizontalWheel();
 
   if (!isOpen || typeof document === 'undefined') return null;
 
@@ -33,6 +34,18 @@ export function MembershipHubModal({ isOpen, onClose, onUsePromo, initialTab = '
   const handleActivate = (planId: string) => {
     purchaseOrSwitchMembership(planId);
     setCurrentId(planId);
+  };
+
+  const handleSelectGroup = (groupId: MembershipGroup) => {
+    setSelectedGroup(groupId);
+    resetScroll();
+    setCurrentCardIndex(1);
+  };
+
+  const handleCardScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    cardDragHandlers.onScroll();
+    const idx = Math.min(visiblePlans.length, Math.max(1, Math.round(e.currentTarget.scrollLeft / 284) + 1));
+    setCurrentCardIndex(idx);
   };
 
   return createPortal(
@@ -95,7 +108,7 @@ export function MembershipHubModal({ isOpen, onClose, onUsePromo, initialTab = '
                 <div ref={groupScrollRef} {...groupDragHandlers} className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none touch-pan-x cursor-grab">
                   {MEMBERSHIP_GROUPS.map((grp) => (
                     <button
-                      key={grp.id} type="button" onClick={() => setSelectedGroup(grp.id)}
+                      key={grp.id} type="button" onClick={() => handleSelectGroup(grp.id)}
                       className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${selectedGroup === grp.id ? 'bg-slate-900 text-white shadow-xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
                     >
                       {grp.label}
@@ -105,14 +118,14 @@ export function MembershipHubModal({ isOpen, onClose, onUsePromo, initialTab = '
               </div>
 
               {/* Dải 5 thẻ trong nhóm lướt ngang tự do */}
-              <div>
-                <div className="flex items-center justify-between text-[11px] text-slate-400 font-medium mb-1 px-0.5">
-                  <span>Kéo chuột hoặc lăn chuột để xem 5 thẻ</span>
-                  <span className="text-slate-500 font-semibold">{visiblePlans.length} thẻ</span>
+              <div className="-mx-4">
+                <div className="flex items-center justify-between text-[11px] font-medium mb-1.5 px-4">
+                  <span className="text-slate-500">Lăn chuột hoặc kéo ngang để xem</span>
+                  <span className="text-[11px] font-bold text-[#13693E]">{currentCardIndex} / {visiblePlans.length}</span>
                 </div>
                 <div
-                  ref={cardScrollRef} {...cardDragHandlers}
-                  className={`flex items-stretch gap-3 overflow-x-auto scrollbar-none touch-pan-x py-1 px-0.5 ${isDragging ? 'cursor-grabbing select-none' : 'cursor-grab'}`}
+                  ref={cardScrollRef} {...cardDragHandlers} onScroll={handleCardScroll}
+                  className={`flex items-stretch gap-3 overflow-x-auto scrollbar-none touch-pan-x select-none px-4 pb-2 ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
                 >
                   {visiblePlans.map((plan) => {
                     const isCurrent = plan.id === currentId;

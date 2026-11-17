@@ -1,144 +1,108 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 
-export function useSmoothHorizontalWheel(resetKey?: unknown) {
-  const containerRef = useRef<HTMLDivElement | null>(null);
+export type HorizontalWheelCallbackRef = ((node: HTMLDivElement | null) => void) & { current: HTMLDivElement | null };
+
+export function useSmoothHorizontalWheel(_resetKey?: unknown) {
+  const elRef = useRef<HTMLDivElement | null>(null);
   const [isHovered, setIsHovered] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  const targetScrollRef = useRef(0), currentScrollRef = useRef(0), lastTimeRef = useRef(0);
-  const maxScrollRef = useRef(0), rafIdRef = useRef<number | null>(null), isPointerDownRef = useRef(false);
+  const targetScrollRef = useRef(0), currentScrollRef = useRef(0);
+  const rafIdRef = useRef<number | null>(null), isPointerDownRef = useRef(false);
   const startXRef = useRef(0), startScrollLeftRef = useRef(0), didDragRef = useRef(false);
+  const cleanupListenerRef = useRef<(() => void) | null>(null);
 
   const stopAnimation = useCallback(() => {
     if (rafIdRef.current !== null) { cancelAnimationFrame(rafIdRef.current); rafIdRef.current = null; }
   }, []);
 
+  const resetScroll = useCallback(() => {
+    stopAnimation(); targetScrollRef.current = 0; currentScrollRef.current = 0;
+    if (elRef.current) elRef.current.scrollLeft = 0;
+  }, [stopAnimation]);
+
   const startAnimation = useCallback(() => {
     if (rafIdRef.current !== null) return;
-    lastTimeRef.current = performance.now();
-    const animate = (now: number) => {
-      const el = containerRef.current;
+    const animate = () => {
+      const el = elRef.current;
       if (!el) { stopAnimation(); return; }
-      const dt = Math.min((now - (lastTimeRef.current || now)) / 1000, 0.033);
-      lastTimeRef.current = now;
-      currentScrollRef.current += (targetScrollRef.current - currentScrollRef.current) * (1 - Math.exp(-28 * dt));
-
-      if (Math.abs(targetScrollRef.current - currentScrollRef.current) < 0.25) {
-        currentScrollRef.current = targetScrollRef.current;
-        el.scrollLeft = currentScrollRef.current;
-        stopAnimation();
-        return;
+      currentScrollRef.current += (targetScrollRef.current - currentScrollRef.current) * 0.22;
+      if (Math.abs(targetScrollRef.current - currentScrollRef.current) < 0.5) {
+        currentScrollRef.current = targetScrollRef.current; el.scrollLeft = currentScrollRef.current; stopAnimation(); return;
       }
-      el.scrollLeft = currentScrollRef.current;
-      rafIdRef.current = requestAnimationFrame(animate);
+      el.scrollLeft = currentScrollRef.current; rafIdRef.current = requestAnimationFrame(animate);
     };
     rafIdRef.current = requestAnimationFrame(animate);
   }, [stopAnimation]);
 
-  const updateMaxScroll = useCallback(() => {
-    const el = containerRef.current;
-    if (el) maxScrollRef.current = Math.max(0, el.scrollWidth - el.clientWidth);
-  }, []);
-
-  const resetScroll = useCallback(() => {
-    stopAnimation();
-    targetScrollRef.current = 0; currentScrollRef.current = 0;
-    if (containerRef.current) { containerRef.current.scrollLeft = 0; updateMaxScroll(); }
-  }, [stopAnimation, updateMaxScroll]);
-
-  useEffect(() => { resetScroll(); }, [resetKey, resetScroll]);
-
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    el.style.scrollBehavior = 'auto';
-    el.style.scrollSnapType = 'none';
-    updateMaxScroll();
-
-    let ro: ResizeObserver | null = null;
-    if (typeof ResizeObserver !== 'undefined') {
-      ro = new ResizeObserver(() => updateMaxScroll());
-      ro.observe(el);
-      if (el.firstElementChild) ro.observe(el.firstElementChild);
-    }
+  const setContainerRef = useCallback((node: HTMLDivElement | null) => {
+    if (cleanupListenerRef.current) { cleanupListenerRef.current(); cleanupListenerRef.current = null; }
+    elRef.current = node;
+    (setContainerRef as unknown as { current: HTMLDivElement | null }).current = node;
+    if (!node) return;
+    node.style.scrollBehavior = 'auto'; node.style.scrollSnapType = 'none';
 
     const onWheel = (e: WheelEvent) => {
-      if (Math.abs(e.deltaX) > Math.abs(e.deltaY) || maxScrollRef.current <= 0.5) return;
-      let rawDelta = e.deltaY;
-      if (e.deltaMode === 1) rawDelta *= 32;
-      else if (e.deltaMode === 2) rawDelta *= 300;
-      const stepDelta = rawDelta * 2.1;
-
-      if (stepDelta < 0 && targetScrollRef.current <= 0.5) return;
-      if (stepDelta > 0 && targetScrollRef.current >= maxScrollRef.current - 0.5) return;
-
+      const el = elRef.current;
+      if (!el) return;
+      const maxScroll = el.scrollWidth - el.clientWidth;
+      if (maxScroll <= 1) return;
+      const rawDelta = Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
+      if (rawDelta === 0) return;
       e.preventDefault(); e.stopPropagation();
-      if (rafIdRef.current === null) {
-        currentScrollRef.current = el.scrollLeft; targetScrollRef.current = el.scrollLeft;
-      }
-      targetScrollRef.current = Math.max(0, Math.min(maxScrollRef.current, targetScrollRef.current + stepDelta));
+      const normalized = e.deltaMode === 1 ? rawDelta * 32 : rawDelta;
+      if (rafIdRef.current === null) { currentScrollRef.current = el.scrollLeft; targetScrollRef.current = el.scrollLeft; }
+      targetScrollRef.current = Math.max(0, Math.min(maxScroll, targetScrollRef.current + normalized * 1.6));
       startAnimation();
     };
 
-    el.addEventListener('wheel', onWheel, { passive: false });
-    el.addEventListener('mouseenter', () => setIsHovered(true));
-    el.addEventListener('mouseleave', () => setIsHovered(false));
-    return () => { el.removeEventListener('wheel', onWheel); if (ro) ro.disconnect(); stopAnimation(); };
-  }, [startAnimation, stopAnimation, updateMaxScroll]);
+    const onEnter = () => setIsHovered(true), onLeave = () => setIsHovered(false);
+    node.addEventListener('wheel', onWheel, { passive: false });
+    node.addEventListener('mouseenter', onEnter); node.addEventListener('mouseleave', onLeave);
+    cleanupListenerRef.current = () => {
+      node.removeEventListener('wheel', onWheel); node.removeEventListener('mouseenter', onEnter);
+      node.removeEventListener('mouseleave', onLeave); stopAnimation();
+    };
+  }, [startAnimation, stopAnimation]);
+
+  (setContainerRef as unknown as { current: HTMLDivElement | null }).current = elRef.current;
 
   const onMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    const el = containerRef.current;
+    const el = elRef.current;
     if (!el || e.button !== 0) return;
-    stopAnimation();
-    isPointerDownRef.current = true;
-    startXRef.current = e.pageX;
-    startScrollLeftRef.current = el.scrollLeft;
-    currentScrollRef.current = el.scrollLeft;
-    targetScrollRef.current = el.scrollLeft;
-    didDragRef.current = false;
+    stopAnimation(); isPointerDownRef.current = true; startXRef.current = e.pageX;
+    startScrollLeftRef.current = el.scrollLeft; currentScrollRef.current = targetScrollRef.current = el.scrollLeft; didDragRef.current = false;
 
     const onWindowMouseMove = (moveEv: MouseEvent) => {
-      if (!isPointerDownRef.current || !containerRef.current) return;
+      if (!isPointerDownRef.current || !elRef.current) return;
       const dx = moveEv.pageX - startXRef.current;
-      if (!didDragRef.current && Math.abs(dx) > 6) {
-        didDragRef.current = true;
-        setIsDragging(true);
-      }
-      if (didDragRef.current && containerRef.current) {
-        stopAnimation();
-        containerRef.current.scrollLeft = startScrollLeftRef.current - dx;
-        currentScrollRef.current = containerRef.current.scrollLeft;
-        targetScrollRef.current = containerRef.current.scrollLeft;
+      if (!didDragRef.current && Math.abs(dx) > 5) { didDragRef.current = true; setIsDragging(true); }
+      if (didDragRef.current && elRef.current) {
+        stopAnimation(); elRef.current.scrollLeft = startScrollLeftRef.current - dx;
+        currentScrollRef.current = targetScrollRef.current = elRef.current.scrollLeft;
       }
     };
 
     const onWindowMouseUp = () => {
-      window.removeEventListener('mousemove', onWindowMouseMove);
-      window.removeEventListener('mouseup', onWindowMouseUp);
-      isPointerDownRef.current = false;
-      setIsDragging(false);
-      setTimeout(() => { didDragRef.current = false; }, 80);
+      window.removeEventListener('mousemove', onWindowMouseMove); window.removeEventListener('mouseup', onWindowMouseUp);
+      isPointerDownRef.current = false; setIsDragging(false); setTimeout(() => { didDragRef.current = false; }, 80);
     };
 
-    window.addEventListener('mousemove', onWindowMouseMove);
-    window.addEventListener('mouseup', onWindowMouseUp);
+    window.addEventListener('mousemove', onWindowMouseMove); window.addEventListener('mouseup', onWindowMouseUp);
   };
 
   return {
-    containerRef, isHovered, isDragging, resetScroll,
+    containerRef: setContainerRef as unknown as HorizontalWheelCallbackRef, isHovered, isDragging, resetScroll,
     dragHandlers: {
       onMouseDown,
       onClickCapture: (e: React.MouseEvent) => {
-        if (didDragRef.current) {
-          e.preventDefault();
-          e.stopPropagation();
-          didDragRef.current = false;
-        }
+        if (didDragRef.current) { e.preventDefault(); e.stopPropagation(); didDragRef.current = false; }
       },
       onTouchStart: () => {
-        stopAnimation();
-        if (containerRef.current) {
-          currentScrollRef.current = containerRef.current.scrollLeft;
-          targetScrollRef.current = containerRef.current.scrollLeft;
+        stopAnimation(); if (elRef.current) currentScrollRef.current = targetScrollRef.current = elRef.current.scrollLeft;
+      },
+      onScroll: () => {
+        if (rafIdRef.current === null && !isPointerDownRef.current && elRef.current) {
+          currentScrollRef.current = targetScrollRef.current = elRef.current.scrollLeft;
         }
       },
     },
