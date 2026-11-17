@@ -1,4 +1,5 @@
-import { Award, CheckCircle2, Lock, ShieldCheck, Wrench, X } from 'lucide-react';
+import { Award, CheckCircle2, Lock, ShieldCheck, X } from 'lucide-react';
+import { createPortal } from 'react-dom';
 
 interface TermsOfServiceModalProps {
   isOpen: boolean;
@@ -6,104 +7,130 @@ interface TermsOfServiceModalProps {
 }
 
 export function TermsOfServiceModal({ isOpen, onClose }: TermsOfServiceModalProps) {
-  if (!isOpen) return null;
+  if (!isOpen || typeof document === 'undefined') return null;
 
-  return (
+  const modalContent = (
     <div
       role="dialog"
       aria-modal="true"
       aria-labelledby="terms-modal-title"
-      className="fixed inset-0 z-[125] flex items-end justify-center pointer-events-auto animate-step-enter"
+      data-testid="terms-of-service-modal"
+      className="fixed inset-0 z-[999] bg-slate-950/45 flex items-end sm:items-center justify-center animate-in fade-in duration-200"
+      onClick={onClose}
     >
-      {/* Dark backdrop without backdrop-blur for 60fps WebGL canvas */}
       <div
-        onClick={onClose}
-        className="fixed inset-0 bg-slate-950/70 transition-opacity"
-        aria-hidden="true"
-      />
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-[430px] max-h-[86vh] bg-white rounded-t-[24px] sm:rounded-2xl flex flex-col overflow-hidden shadow-2xl"
+      >
+        {/* 1. Header Trắng Tinh Gọn */}
+        <div className="w-9 h-1 rounded-full bg-slate-200 mx-auto mt-2.5 mb-1 shrink-0" aria-hidden="true" />
 
-      <div className="relative w-full max-w-[430px] rounded-t-[28px] bg-white overflow-hidden shadow-2xl transition-all">
-        {/* Obsidian Dark Header */}
-        <div className="bg-[#090D16] px-5 pt-3.5 pb-4 text-white border-b border-white/10">
-          <div className="flex justify-center -mt-1 pb-2.5">
-            <div className="h-1 w-10 rounded-full bg-white/20" aria-hidden="true" />
+        <div className="px-4 py-2.5 border-b border-slate-100 flex items-center justify-between gap-2 shrink-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <h2 id="terms-modal-title" className="text-[18px] font-extrabold text-slate-950 tracking-tight truncate">
+              Điều khoản &amp; Bảo mật
+            </h2>
+            <span className="bg-[#E6F4EC] text-[#13693E] text-[10.5px] font-bold px-2 py-0.5 rounded-full shrink-0">
+              Cập nhật 2026
+            </span>
           </div>
 
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 border border-emerald-400/40 px-2.5 py-0.5 text-[10.5px] font-bold text-emerald-400 mb-1.5">
-                <ShieldCheck className="h-3 w-3" />
-                <span>MotoSOS Legal • Cập nhật 2026</span>
-              </div>
-              <h2 id="terms-modal-title" className="text-base font-extrabold text-white tracking-tight">
-                Điều khoản &amp; Chính sách bảo mật
-              </h2>
-            </div>
-
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label="Đóng điều khoản"
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-slate-300 hover:bg-white/20 hover:text-white transition-colors"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-
-        {/* Scrollable Terms Content */}
-        <div className="max-h-[62vh] overflow-y-auto px-5 py-3.5 space-y-3 text-xs [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-          {/* Điều 1 */}
-          <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-3.5 space-y-1.5">
-            <div className="flex items-center gap-2 text-emerald-700 font-bold">
-              <ShieldCheck className="h-4 w-4 shrink-0" />
-              <span>1. Quy trình cứu hộ &amp; Xác thực OTP 4 số</span>
-            </div>
-            <p className="text-slate-600 leading-relaxed">
-              Khách hàng và kỹ thuật viên cứu hộ phải đối soát trực tiếp mã PIN OTP 4 số ngẫu nhiên trước khi thợ tiếp cận hoặc can thiệp vào xe. Tuyệt đối không giao chìa khóa cho người không đọc đúng mã OTP để chống thợ giả danh và bảo vệ an toàn phương tiện.
-            </p>
-          </div>
-
-          {/* Điều 2 */}
-          <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-3.5 space-y-1.5">
-            <div className="flex items-center gap-2 text-amber-700 font-bold">
-              <CheckCircle2 className="h-4 w-4 shrink-0" />
-              <span>2. Minh bạch giá &amp; Chính sách hủy chuyến</span>
-            </div>
-            <p className="text-slate-600 leading-relaxed">
-              Giá dịch vụ niêm yết cố định trọn gói. Phụ phí đêm khuya (+20.000đ áp dụng từ 22h – 05h). Mọi đề xuất phát sinh linh kiện phải được khách duyệt tại chỗ trước khi thực hiện. Khách được hủy miễn phí trong 3 phút đầu; sau 3 phút thợ di chuyển áp dụng phí xăng 30.000đ.
-            </p>
-          </div>
-
-          {/* Điều 3 */}
-          <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-3.5 space-y-1.5">
-            <div className="flex items-center gap-2 text-blue-700 font-bold">
-              <Award className="h-4 w-4 shrink-0" />
-              <span>3. Bảo hành điện tử 7 ngày &amp; Bảo hiểm 50.000.000đ</span>
-            </div>
-            <p className="text-slate-600 leading-relaxed">
-              Linh kiện và kỹ thuật cứu hộ được bảo hành điện tử 7 ngày tại 30+ Trạm An Toàn MotoSOS khắp TP.HCM. Mỗi ca cứu hộ hợp lệ được bảo trợ bởi gói Bảo hiểm Trách nhiệm Dân sự lên đến 50.000.000đ bảo vệ tối đa quyền lợi chủ xe.
-            </p>
-          </div>
-
-          {/* Điều 4 */}
-          <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-3.5 space-y-1.5">
-            <div className="flex items-center gap-2 text-indigo-700 font-bold">
-              <Lock className="h-4 w-4 shrink-0" />
-              <span>4. Bảo mật dữ liệu cá nhân &amp; Quyền riêng tư</span>
-            </div>
-            <p className="text-slate-600 leading-relaxed">
-              Thông tin cá nhân, số điện thoại và nhật ký cứu hộ được mã hóa cục bộ an toàn (chuẩn MS_SEC_V1). Tọa độ định vị GPS chỉ được chia sẻ tức thời khi khách hàng chủ động bấm lệnh gọi thợ hoặc kích hoạt SOS khẩn cấp.
-            </p>
-          </div>
-        </div>
-
-        {/* Modal Footer */}
-        <div className="p-4 border-t border-slate-100 bg-white">
           <button
             type="button"
             onClick={onClose}
-            className="w-full py-3.5 rounded-2xl bg-[#090D16] text-emerald-400 font-bold text-sm tracking-wide shadow-lg shadow-slate-900/10 hover:bg-slate-900 active:scale-[0.98] transition-all border border-emerald-500/30 flex items-center justify-center gap-2"
+            aria-label="Đóng điều khoản"
+            className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center shrink-0 transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* 2. Dải 3 Điểm Cốt Lõi Đọc Nhanh */}
+        <div className="mx-4 mt-3 p-2.5 rounded-2xl bg-[#F4F8F6] border border-emerald-600/10 grid grid-cols-3 gap-1.5 text-center shrink-0">
+          <div className="px-1">
+            <p className="text-[12px] font-extrabold text-[#13693E]">OTP 4 số</p>
+            <p className="text-[10px] text-slate-500 mt-0.5">Chống thợ giả</p>
+          </div>
+          <div className="border-x border-emerald-600/10 px-1">
+            <p className="text-[12px] font-extrabold text-[#13693E]">Miễn phí 3p</p>
+            <p className="text-[10px] text-slate-500 mt-0.5">Hủy chuyến đầu</p>
+          </div>
+          <div className="px-1">
+            <p className="text-[12px] font-extrabold text-[#13693E]">50.000.000đ</p>
+            <p className="text-[10px] text-slate-500 mt-0.5">Bảo hiểm sự cố</p>
+          </div>
+        </div>
+
+        {/* 3. Danh Sách 4 Điều Khoản Dạng Phẳng Chuẩn Grab */}
+        <div className="flex-1 overflow-y-auto overscroll-contain px-4 divide-y divide-slate-100 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+          {/* Mục 1 */}
+          <div className="py-3.5 flex items-start gap-3">
+            <div className="w-8 h-8 rounded-full bg-[#E6F4EC] text-[#13693E] flex items-center justify-center shrink-0 mt-0.5">
+              <ShieldCheck className="h-4 w-4" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-[13.5px] font-bold text-slate-950 leading-snug">
+                1. Quy trình cứu hộ &amp; Xác thực OTP 4 số
+              </h3>
+              <p className="text-[12.5px] text-slate-600 leading-[1.55] mt-1">
+                Đối soát trực tiếp <strong className="font-semibold text-slate-900">mã PIN OTP 4 số</strong> trước khi giao xe. Tuyệt đối không giao chìa khóa nếu thợ không đọc đúng mã để chống giả danh.
+              </p>
+            </div>
+          </div>
+
+          {/* Mục 2 */}
+          <div className="py-3.5 flex items-start gap-3">
+            <div className="w-8 h-8 rounded-full bg-[#E6F4EC] text-[#13693E] flex items-center justify-center shrink-0 mt-0.5">
+              <CheckCircle2 className="h-4 w-4" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-[13.5px] font-bold text-slate-950 leading-snug">
+                2. Minh bạch giá &amp; Chính sách hủy chuyến
+              </h3>
+              <p className="text-[12.5px] text-slate-600 leading-[1.55] mt-1">
+                Giá niêm yết trọn gói; phụ phí đêm khuya <strong className="font-semibold text-slate-900">+20.000đ</strong> (22h – 05h). <strong className="font-semibold text-slate-900">Hủy miễn phí trong 3 phút đầu</strong>; sau 3 phút khi thợ đã di chuyển áp dụng phí xăng <strong className="font-semibold text-slate-900">30.000đ</strong>.
+              </p>
+            </div>
+          </div>
+
+          {/* Mục 3 */}
+          <div className="py-3.5 flex items-start gap-3">
+            <div className="w-8 h-8 rounded-full bg-[#E6F4EC] text-[#13693E] flex items-center justify-center shrink-0 mt-0.5">
+              <Award className="h-4 w-4" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-[13.5px] font-bold text-slate-950 leading-snug">
+                3. Bảo hành điện tử 7 ngày &amp; Bảo hiểm 50.000.000đ
+              </h3>
+              <p className="text-[12.5px] text-slate-600 leading-[1.55] mt-1">
+                Linh kiện và kỹ thuật được <strong className="font-semibold text-slate-900">bảo hành 7 ngày</strong> tại 30+ Trạm An Toàn TP.HCM, kèm gói <strong className="font-semibold text-slate-900">Bảo hiểm Trách nhiệm Dân sự 50.000.000đ</strong> cho mỗi ca hợp lệ.
+              </p>
+            </div>
+          </div>
+
+          {/* Mục 4 */}
+          <div className="py-3.5 flex items-start gap-3">
+            <div className="w-8 h-8 rounded-full bg-[#E6F4EC] text-[#13693E] flex items-center justify-center shrink-0 mt-0.5">
+              <Lock className="h-4 w-4" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-[13.5px] font-bold text-slate-950 leading-snug">
+                4. Bảo mật dữ liệu cá nhân &amp; Quyền riêng tư
+              </h3>
+              <p className="text-[12.5px] text-slate-600 leading-[1.55] mt-1">
+                Thông tin cá nhân và nhật ký cứu hộ được <strong className="font-semibold text-slate-900">mã hóa cục bộ (MS_SEC_V1)</strong>. Tọa độ GPS chỉ chia sẻ tức thời khi bạn chủ động gọi thợ hoặc bật SOS.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* 4. Chân Trang Trắng & Nút Xác Nhận Xanh Ngọc Chuẩn Grab */}
+        <div className="p-4 bg-white border-t border-slate-100 shrink-0">
+          <button
+            type="button"
+            onClick={onClose}
+            data-testid="terms-agree-btn"
+            className="w-full py-3 rounded-xl bg-[#13693E] hover:bg-[#0F5C36] text-white font-extrabold text-[13.5px] flex items-center justify-center gap-2 transition-colors active:scale-[0.99] shadow-sm"
           >
             <ShieldCheck className="h-4 w-4" />
             <span>Đã hiểu &amp; Đồng ý</span>
@@ -112,4 +139,6 @@ export function TermsOfServiceModal({ isOpen, onClose }: TermsOfServiceModalProp
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }
