@@ -109,6 +109,9 @@ export interface OrderPricing {
   nightSurcharge?: number;
   extraCost?: number;
   extraItemTitle?: string;
+  memberDiscountAmount?: number;
+  memberPlanName?: string;
+  isNightWaivedByMember?: boolean;
 }
 
 export interface ChatMessage {

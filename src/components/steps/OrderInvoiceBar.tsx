@@ -95,7 +95,7 @@ export function OrderInvoiceBar({
             </span>
           </div>
 
-          {hasNightSurcharge && (
+          {hasNightSurcharge && !pricing.isNightWaivedByMember && (
             <div className="flex items-center justify-between text-amber-700 font-medium">
               <span className="flex items-center gap-1">
                 <Moon className="h-3 w-3 text-amber-600" />
@@ -107,11 +107,32 @@ export function OrderInvoiceBar({
             </div>
           )}
 
+          {pricing.isNightWaivedByMember && (
+            <div className="flex items-center justify-between text-emerald-700 font-medium">
+              <span className="flex items-center gap-1">
+                <Moon className="h-3 w-3 text-emerald-600" />
+                <span>Phụ phí đêm khuya</span>
+              </span>
+              <span className="font-sans font-bold text-[11px] bg-emerald-50 text-emerald-800 px-1.5 py-0.5 rounded border border-emerald-200">
+                Miễn phí (Hội viên)
+              </span>
+            </div>
+          )}
+
+          {pricing.memberDiscountAmount && (
+            <div className="flex items-center justify-between font-medium text-emerald-700">
+              <span>Ưu đãi {pricing.memberPlanName || 'Hội viên'}</span>
+              <span className="font-sans font-semibold tabular-nums">
+                -{formatVnd(pricing.memberDiscountAmount)}
+              </span>
+            </div>
+          )}
+
           {hasDiscount && (
             <div className="flex items-center justify-between font-medium text-emerald-600">
-              <span>Giảm giá ({pricing.appliedVoucher?.code})</span>
+              <span>Voucher ({pricing.appliedVoucher?.code})</span>
               <span className="font-sans font-semibold tabular-nums">
-                -{formatVnd(pricing.discountAmount)}
+                -{formatVnd(pricing.discountAmount - (pricing.memberDiscountAmount || 0))}
               </span>
             </div>
           )}

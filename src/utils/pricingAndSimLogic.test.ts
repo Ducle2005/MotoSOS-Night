@@ -146,6 +146,47 @@ test('calculateRescuePricing applies night surcharge and approved scope item cos
   assert.equal(fullPricing.finalPrice, 130000);
 });
 
+test('calculateRescuePricing applies membership discount and waives night fee when plan supports it', () => {
+  // Flat tire 85k with priority_247 (30% discount = 25.5k, night fee waived)
+  const priorityPricing = calculateRescuePricing(
+    'flat_tire',
+    ISSUE_OPTIONS,
+    'current_location',
+    null,
+    VOUCHER_OPTIONS,
+    true, // isNight
+    0,
+    undefined,
+    false,
+    'priority_247',
+  );
+  assert.equal(priorityPricing.basePrice, 85000);
+  assert.equal(priorityPricing.isNightWaivedByMember, true);
+  assert.equal(priorityPricing.nightSurcharge, 0);
+  assert.equal(priorityPricing.memberDiscountAmount, 25500);
+  assert.equal(priorityPricing.finalPrice, 85000 - 25500);
+
+  // Daily plan without night fee waiver
+  const litePricing = calculateRescuePricing(
+    'flat_tire',
+    ISSUE_OPTIONS,
+    'current_location',
+    null,
+    VOUCHER_OPTIONS,
+    true, // isNight
+    0,
+    undefined,
+    false,
+    'moto_lite_7d', // 15% max 20k, nightFeeWaived: false
+  );
+  assert.equal(litePricing.basePrice, 85000);
+  assert.equal(litePricing.isNightWaivedByMember, false);
+  assert.equal(litePricing.nightSurcharge, 20000);
+  // 15% of 85k is 12750
+  assert.equal(litePricing.memberDiscountAmount, 12750);
+  assert.equal(litePricing.finalPrice, 85000 + 20000 - 12750);
+});
+
 test('cleanAddressSnippet cleans Street, Saigon, Ho Chi Minh and formats clean street snippet', () => {
   const result = cleanAddressSnippet('Circle K', 'Ly Tu Trong Street, Saigon, Ho Chi Minh');
   assert.equal(result, 'Circle K, Đ. Lý Tự Trọng');

@@ -8,6 +8,7 @@ interface ProfileGroupSectionsProps {
   onOpenAddresses: () => void;
   onOpenNotifications: () => void;
   onOpenTerms?: () => void;
+  activePlanName?: string;
 }
 
 export function ProfileGroupSections({
@@ -17,6 +18,7 @@ export function ProfileGroupSections({
   onOpenAddresses,
   onOpenNotifications,
   onOpenTerms,
+  activePlanName,
 }: ProfileGroupSectionsProps) {
   const [copiedCode, setCopiedCode] = useState(false);
 
@@ -45,7 +47,7 @@ export function ProfileGroupSections({
             </div>
             <div className="flex items-center gap-1.5">
               <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10.5px] font-bold text-emerald-700 border border-emerald-200/80">
-                Priority 24/7
+                {activePlanName || 'Priority 24/7'}
               </span>
               <ChevronRight className="h-4 w-4 text-slate-400" />
             </div>

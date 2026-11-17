@@ -7,6 +7,8 @@ import {
 } from '../../types/profile';
 import { calculateHistoryStats, loadRescueHistory } from '../../utils/rescueHistoryLogic';
 import type { ActiveLocation, ActiveRescueInfo } from '../../types/rescue';
+import { getActiveMembershipId, getMembershipPlan } from '../../data/membershipCatalog';
+import { MembershipHubModal } from '../MembershipHubModal';
 import { EmergencyContactModal } from '../profile/EmergencyContactModal';
 import { MemberBenefitModal } from '../profile/MemberBenefitModal';
 import { MyVehicleModal } from '../profile/MyVehicleModal';
@@ -46,6 +48,18 @@ export function ProfileTab({
   const [benefitModal, setBenefitModal] = useState<'membership' | 'tier' | null>(null);
   const [isAddressesOpen, setIsAddressesOpen] = useState(false);
   const [isTermsOpen, setIsTermsOpen] = useState(false);
+  const [isMembershipHubOpen, setIsMembershipHubOpen] = useState(false);
+  const [activePlanId, setActivePlanId] = useState(() => getActiveMembershipId());
+
+  useEffect(() => {
+    const onMemChanged = () => setActivePlanId(getActiveMembershipId());
+    window.addEventListener('motosos_membership_changed', onMemChanged);
+    window.addEventListener('storage', onMemChanged);
+    return () => {
+      window.removeEventListener('motosos_membership_changed', onMemChanged);
+      window.removeEventListener('storage', onMemChanged);
+    };
+  }, []);
 
   useEffect(() => {
     setProfile(loadUserProfile());
@@ -96,16 +110,21 @@ export function ProfileTab({
 
         {/* 4. Thẻ Nhóm 1 & 2 */}
         <ProfileGroupSections
-          onOpenMembership={() => setBenefitModal('membership')}
+          onOpenMembership={() => setIsMembershipHubOpen(true)}
           onOpenTier={() => setBenefitModal('tier')}
           onNavigateToActivity={onNavigateToActivity}
           onOpenAddresses={() => setIsAddressesOpen(true)}
           onOpenNotifications={onOpenNotifications}
           onOpenTerms={() => setIsTermsOpen(true)}
+          activePlanName={getMembershipPlan(activePlanId).name}
         />
       </div>
 
       {/* Modals & Drawers */}
+      <MembershipHubModal
+        isOpen={isMembershipHubOpen}
+        onClose={() => setIsMembershipHubOpen(false)}
+      />
       <TermsOfServiceModal
         isOpen={isTermsOpen}
         onClose={() => setIsTermsOpen(false)}

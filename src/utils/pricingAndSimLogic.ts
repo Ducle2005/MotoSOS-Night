@@ -1,3 +1,4 @@
+import { getMembershipPlan } from '../data/membershipCatalog';
 import type {
   GeoCoord,
   IssueOption,
@@ -65,6 +66,7 @@ export function calculateRescuePricing(
   extraCost = 0,
   extraItemTitle?: string,
   isRemoteArea = false,
+  membershipPlanId?: string | null,
 ): OrderPricing {
   const matchedIssue =
     options.find((opt) => opt.id === issueId) ?? options[0] ?? null;
@@ -78,10 +80,26 @@ export function calculateRescuePricing(
       ? candidateVoucher
       : null;
 
-  const discountAmount = appliedVoucher
+  const voucherDiscount = appliedVoucher
     ? Math.min(basePrice, appliedVoucher.discountAmount)
     : 0;
-  const nightSurcharge = isNight ? NIGHT_SURCHARGE : 0;
+
+  let memberDiscountAmount = 0;
+  let memberPlanName: string | undefined;
+  let isNightWaivedByMember = false;
+
+  if (membershipPlanId) {
+    const plan = getMembershipPlan(membershipPlanId);
+    memberPlanName = plan.name;
+    if (isNight && plan.nightFeeWaived) {
+      isNightWaivedByMember = true;
+    }
+    const rawDisc = Math.round(basePrice * (plan.discountPercent / 100));
+    memberDiscountAmount = Math.min(rawDisc, plan.maxDiscountPerOrder);
+  }
+
+  const discountAmount = Math.min(basePrice, voucherDiscount + memberDiscountAmount);
+  const nightSurcharge = (isNight && !isNightWaivedByMember) ? NIGHT_SURCHARGE : 0;
   const finalPrice = Math.max(0, basePrice + nightSurcharge - discountAmount + extraCost);
 
   return {
@@ -92,6 +110,9 @@ export function calculateRescuePricing(
     nightSurcharge,
     extraCost,
     extraItemTitle,
+    memberDiscountAmount: memberDiscountAmount > 0 ? memberDiscountAmount : undefined,
+    memberPlanName,
+    isNightWaivedByMember,
   };
 }
 

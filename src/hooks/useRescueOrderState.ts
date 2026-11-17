@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CampaignBannerItem, PartnerPerkItem } from '../data/homePromotions';
 import { FALLBACK_USER_LOCATION, ISSUE_OPTIONS, MOCK_MECHANIC, MOCK_SAFE_STATIONS, VOUCHER_OPTIONS } from '../data/mockRescueData';
 import type { AppTab, GasStation, IssueType, LocationSuggestion, MapLayerFilter, PickupMode, RescueReceipt, RescueStep, SafeStation, SafeStationCategory, ScopeApprovalItem, TrackingStatus, VoucherId } from '../types/rescue';
+import { getActiveMembershipId } from '../data/membershipCatalog';
 import { gasStationToSafeStation } from '../utils/gasStationApi';
 import { calculateRescuePricing, isNightTimeWindow, MOCK_SCOPE_ITEMS } from '../utils/pricingAndSimLogic';
 import { createRescueReceiptFromOrder, loadRescueHistory, saveRescueHistory } from '../utils/rescueHistoryLogic';
@@ -51,15 +52,8 @@ export function useRescueOrderState() {
   const activeInspect = useActivePlaceInspect(geo.userLocation.coord);
   const pinPicker = useMapPinPicker();
 
-  const effectiveStations = useMemo(
-    () => (chosenGasSafeStation && !geo.stations.some((s) => s.id === chosenGasSafeStation.id) ? [chosenGasSafeStation, ...geo.stations] : geo.stations),
-    [geo.stations, chosenGasSafeStation],
-  );
-  const pickupTarget = useMemo(
-    () => resolvePickupTarget(pickupMode, geo.userLocation || FALLBACK_USER_LOCATION, effectiveStations, selectedStationId),
-    [pickupMode, geo.userLocation, effectiveStations, selectedStationId],
-  );
-
+  const effectiveStations = useMemo(() => (chosenGasSafeStation && !geo.stations.some((s) => s.id === chosenGasSafeStation.id) ? [chosenGasSafeStation, ...geo.stations] : geo.stations), [geo.stations, chosenGasSafeStation]);
+  const pickupTarget = useMemo(() => resolvePickupTarget(pickupMode, geo.userLocation || FALLBACK_USER_LOCATION, effectiveStations, selectedStationId), [pickupMode, geo.userLocation, effectiveStations, selectedStationId]);
   useEffect(() => { setActiveStationForRoute(pickupTarget.station); }, [pickupTarget.station]);
 
   const handleChangePickupMode = useCallback((mode: PickupMode) => {
@@ -73,20 +67,25 @@ export function useRescueOrderState() {
     }
   }, [pickupTarget.station, activeInspect]);
 
+  const [membershipId, setMembershipId] = useState<string>(() => getActiveMembershipId());
+  useEffect(() => {
+    const onMemChanged = () => setMembershipId(getActiveMembershipId());
+    window.addEventListener('motosos_membership_changed', onMemChanged);
+    window.addEventListener('storage', onMemChanged);
+    return () => {
+      window.removeEventListener('motosos_membership_changed', onMemChanged);
+      window.removeEventListener('storage', onMemChanged);
+    };
+  }, []);
+
   const issueSummary = useMemo(() => getIssueLabel(selectedIssue, ISSUE_OPTIONS, customNote), [selectedIssue, customNote]);
   const isNight = useMemo(() => isNightTimeWindow(simulateNight), [simulateNight]);
   const isRemoteArea = geo.stations.length === 0;
-  const pricing = useMemo(
-    () => calculateRescuePricing(selectedIssue, ISSUE_OPTIONS, pickupMode, selectedVoucherId, VOUCHER_OPTIONS, isNight, approvedExtra?.cost ?? 0, approvedExtra?.title, isRemoteArea),
-    [selectedIssue, pickupMode, selectedVoucherId, isNight, approvedExtra, isRemoteArea],
-  );
+  const pricing = useMemo(() => calculateRescuePricing(selectedIssue, ISSUE_OPTIONS, pickupMode, selectedVoucherId, VOUCHER_OPTIONS, isNight, approvedExtra?.cost ?? 0, approvedExtra?.title, isRemoteArea, membershipId), [selectedIssue, pickupMode, selectedVoucherId, isNight, approvedExtra, isRemoteArea, membershipId]);
   const mechanicStartCoord = useMemo(() => buildMechanicApproachCoord(pickupTarget.coord), [pickupTarget.coord.lat, pickupTarget.coord.lng]);
 
   const notifs = useRescueOrderNotifications({ step, trackingStatus, pickupTitle: pickupTarget.title });
-  const mechanicSim = useMechanicSimulation({
-    step, trackingStatus, mechanicStartCoord, pickupCoord: pickupTarget.coord,
-    pickupTitle: pickupTarget.title, mechanicName: MOCK_MECHANIC.name, onMechanicReply: notifs.notifyMechanicReply,
-  });
+  const mechanicSim = useMechanicSimulation({ step, trackingStatus, mechanicStartCoord, pickupCoord: pickupTarget.coord, pickupTitle: pickupTarget.title, mechanicName: MOCK_MECHANIC.name, onMechanicReply: notifs.notifyMechanicReply });
 
   const clearOverlays = (clearGas = false) => {
     activeInspect.clearActiveRoute(); if (clearGas) setChosenGasSafeStation(null);

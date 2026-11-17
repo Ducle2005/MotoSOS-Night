@@ -1,13 +1,15 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Bell, Crown, ScanLine, Search, User } from 'lucide-react';
 import { useNotifications } from '../../context/NotificationContext';
 import type { CampaignBannerItem, PartnerPerkItem } from '../../data/homePromotions';
+import { getActiveMembershipId, getMembershipPlan } from '../../data/membershipCatalog';
 import { useSmoothHorizontalWheel } from '../../hooks/useSmoothHorizontalWheel';
 import { profileRepo } from '../../repositories/storageRepository';
 import type {
   ActiveLocation, ActiveRescueInfo, GasStation, IssueType, PoliceStation, RepairShop, SafeStation, SafeStationCategory, UserLocation,
 } from '../../types/rescue';
 import { ActiveRescueHomeCard } from '../ActiveRescueHomeCard';
+import { MembershipHubModal } from '../MembershipHubModal';
 import { HomeActionGrid } from './HomeActionGrid';
 import { HomeNearbyPlacesSections } from './HomeNearbyPlacesSections';
 
@@ -18,11 +20,9 @@ interface HomeTabProps {
   onOpenLocationSearch: () => void; onCallMechanicNow: () => void; onOpenTrackingMap?: () => void; onOpenMechanicChat?: () => void;
   onQuickIssueSelect: (issue: IssueType) => void; onQuickCategorySelect: (category: SafeStationCategory) => void;
   onQuickSosSelect: () => void; onSelectStationCard: (stationId: string) => void; onOpenRepairShopsMap: (shopId?: string) => void;
-  onRouteToPoliceStation?: (station: PoliceStation) => void; onRouteToGasStation?: (gas: GasStation) => void;
-  onRouteToRepairShop?: (shop: RepairShop) => void;
-  onTriggerDemoMechanic: () => void; onSelectCampaignBanner: (banner: CampaignBannerItem) => void;
-  onSelectPartnerPerk: (perk: PartnerPerkItem) => void; onOpenNotifications: () => void;
-  onOpenMechanicDriver?: () => void; onOpenAiChat?: () => void; isOffline?: boolean; onToggleOffline?: () => void;
+  onRouteToPoliceStation?: (station: PoliceStation) => void; onRouteToGasStation?: (gas: GasStation) => void; onRouteToRepairShop?: (shop: RepairShop) => void;
+  onTriggerDemoMechanic: () => void; onSelectCampaignBanner: (banner: CampaignBannerItem) => void; onSelectPartnerPerk: (perk: PartnerPerkItem) => void;
+  onOpenNotifications: () => void; onOpenMechanicDriver?: () => void; onOpenAiChat?: () => void; isOffline?: boolean; onToggleOffline?: () => void;
   onNavigateToProfile?: () => void; onResetGps?: () => void;
 }
 
@@ -42,10 +42,18 @@ export function HomeTab({
 }: HomeTabProps) {
   const { unreadCount } = useNotifications();
   const { containerRef: discountScrollRef, ...discountWheelProps } = useSmoothHorizontalWheel(activeLocation.address);
+  const [isMembershipModalOpen, setIsMembershipModalOpen] = useState(false);
+  const [membershipId, setMembershipId] = useState(() => getActiveMembershipId());
 
   useEffect(() => {
-    if (discountScrollRef.current) discountScrollRef.current.scrollLeft = 0;
-  }, [discountScrollRef, activeLocation.address]);
+    const onMemChanged = () => setMembershipId(getActiveMembershipId());
+    window.addEventListener('motosos_membership_changed', onMemChanged);
+    window.addEventListener('storage', onMemChanged);
+    return () => { window.removeEventListener('motosos_membership_changed', onMemChanged); window.removeEventListener('storage', onMemChanged); };
+  }, []);
+  const currentPlan = getMembershipPlan(membershipId);
+
+  useEffect(() => { if (discountScrollRef.current) discountScrollRef.current.scrollLeft = 0; }, [discountScrollRef, activeLocation.address]);
 
   const heroAddressLabel = activeLocation.isCurrentGPS ? (userLocation.address || 'Vị trí hiện tại của bạn') : activeLocation.address;
   const profile = profileRepo.getProfile();
@@ -60,10 +68,15 @@ export function HomeTab({
         <div className="flex items-center justify-between gap-1.5 pb-2">
           <div className="flex items-center gap-1.5 min-w-0">
             <h1 className="text-[16px] font-black tracking-tight text-white flex items-center gap-1">MotoSOS</h1>
-            <span className="inline-flex items-center gap-1 rounded-full border border-amber-300/40 bg-amber-400/20 px-1.5 py-0.5 text-[9px] font-bold text-amber-200 shadow-xs whitespace-nowrap">
+            <button
+              type="button"
+              onClick={() => setIsMembershipModalOpen(true)}
+              aria-label="Xem thẻ hội viên"
+              className="inline-flex items-center gap-1 rounded-full border border-amber-300/40 bg-amber-400/20 px-1.5 py-0.5 text-[9px] font-bold text-amber-200 shadow-xs whitespace-nowrap hover:bg-amber-400/30 active:scale-95 transition-all"
+            >
               <Crown className="h-2.5 w-2.5 text-amber-300" aria-hidden="true" />
-              <span>VIP 24/7</span>
-            </span>
+              <span>{currentPlan.name}</span>
+            </button>
           </div>
 
           <div className="flex shrink-0 items-center gap-1">
@@ -167,15 +180,8 @@ export function HomeTab({
       {/* Thân Trang Tối Giản Thoáng Mắt */}
       <div className="px-4 pt-2.5 space-y-3">
         {/* Thanh Tóm Tắt Thông Tin Siêu Mảnh */}
-        <div
-          onClick={onNavigateToProfile}
-          className="rounded-xl bg-[#F4F7F5] border border-slate-200/50 px-3.5 py-2.5 flex items-center justify-between text-[11px] text-slate-600 cursor-pointer hover:bg-[#EAF0EC] transition-colors shadow-2xs"
-        >
-          <div className="flex items-center gap-1.5 min-w-0">
-            <span className="truncate">
-              Xe: <strong className="font-extrabold text-slate-800">{bikeLabel}</strong> • Khẩn cấp: <strong className="font-extrabold text-slate-800">{emergencyContact || 'Chưa thiết lập'}</strong>
-            </span>
-          </div>
+        <div onClick={onNavigateToProfile} className="rounded-xl bg-[#F4F7F5] border border-slate-200/50 px-3.5 py-2.5 flex items-center justify-between text-[11px] text-slate-600 cursor-pointer hover:bg-[#EAF0EC] transition-colors shadow-2xs">
+          <span className="truncate">Xe: <strong className="font-extrabold text-slate-800">{bikeLabel}</strong> • Khẩn cấp: <strong className="font-extrabold text-slate-800">{emergencyContact || 'Chưa thiết lập'}</strong></span>
           <span className="font-bold text-[#13693E] shrink-0 ml-2">Thiết lập ›</span>
         </div>
 
@@ -204,16 +210,12 @@ export function HomeTab({
         )}
 
         {/* Dải Thẻ Ưu Đãi — Nền Trắng Viền Xanh Ngọc Mảnh (Zero-Lag 120fps) */}
-        <div
-          ref={discountScrollRef}
-          {...discountWheelProps.dragHandlers}
-          className="-mx-4 px-4 flex items-stretch justify-start gap-2.5 overflow-x-auto [&::-webkit-scrollbar]:hidden will-change-scroll [contain:paint]"
-        >
+        <div ref={discountScrollRef} {...discountWheelProps.dragHandlers} className="-mx-4 px-4 flex items-stretch justify-start gap-2.5 overflow-x-auto [&::-webkit-scrollbar]:hidden will-change-scroll [contain:paint]">
           {DISCOUNT_CARDS.map((card) => (
             <div
               key={card.id}
               onClick={() => onSelectPartnerPerk({ id: card.id, title: card.title, voucherId: card.code, description: card.title, imageUrl: '', fallbackGradient: '' })}
-              className="w-[165px] shrink-0 rounded-2xl bg-white border border-emerald-600/20 p-3 shadow-2xs flex flex-col justify-between cursor-pointer transition-colors duration-150 hover:border-emerald-500/50 hover:bg-emerald-50/20 active:scale-[0.99]"
+              className="w-[165px] shrink-0 rounded-2xl bg-white border border-emerald-600/20 p-3 shadow-2xs flex flex-col justify-between cursor-pointer hover:border-emerald-500/50 hover:bg-emerald-50/20 active:scale-[0.99] transition-colors"
             >
               <div>
                 <span className="text-[9.5px] font-bold text-[#13693E] bg-emerald-50 border border-emerald-600/15 px-2 py-0.5 rounded-full w-fit inline-block">{card.badge}</span>
@@ -226,19 +228,14 @@ export function HomeTab({
 
         {/* 1 Mục Duy Nhất Có Tab Lọc: Điểm Hỗ Trợ An Toàn Gần Bạn */}
         <HomeNearbyPlacesSections
-          originCoord={{ lat: activeLocation.lat, lng: activeLocation.lng }}
-          activeAddress={activeLocation.address}
-          stations={stations}
-          policeStations={policeStations}
-          gasStations={gasStations}
-          openRepairShops={openRepairShops}
-          onOpenTrackingMap={onOpenTrackingMap}
-          onSelectStationCard={onSelectStationCard}
-          onRouteToPoliceStation={onRouteToPoliceStation}
-          onRouteToGasStation={onRouteToGasStation}
-          onRouteToRepairShop={onRouteToRepairShop}
+          originCoord={{ lat: activeLocation.lat, lng: activeLocation.lng }} activeAddress={activeLocation.address}
+          stations={stations} policeStations={policeStations} gasStations={gasStations} openRepairShops={openRepairShops}
+          onOpenTrackingMap={onOpenTrackingMap} onSelectStationCard={onSelectStationCard} onRouteToPoliceStation={onRouteToPoliceStation}
+          onRouteToGasStation={onRouteToGasStation} onRouteToRepairShop={onRouteToRepairShop}
         />
       </div>
+
+      <MembershipHubModal isOpen={isMembershipModalOpen} onClose={() => setIsMembershipModalOpen(false)} />
     </div>
   );
 }
