@@ -18,25 +18,18 @@ import { useRescueOrderNotifications } from './useRescueOrderNotifications';
 export function useRescueOrderState() {
   const [activeTab, setActiveTab] = useState<AppTab>('home');
   const [step, setStep] = useState<RescueStep>('idle');
-  const [selectedIssue, setSelectedIssue] = useState<IssueType | null>(null);
-  const [customNote, setCustomNote] = useState('');
-  const [pickupMode, setPickupMode] = useState<PickupMode>('current_location');
-  const [selectedVoucherId, setSelectedVoucherId] = useState<VoucherId | null>(null);
+  const [selectedIssue, setSelectedIssue] = useState<IssueType | null>(null); const [customNote, setCustomNote] = useState('');
+  const [pickupMode, setPickupMode] = useState<PickupMode>('current_location'); const [selectedVoucherId, setSelectedVoucherId] = useState<VoucherId | null>(null);
   const [selectedStationId, setSelectedStationId] = useState<string | null>(MOCK_SAFE_STATIONS[0]?.id ?? null);
-  const [trackingStatus, setTrackingStatus] = useState<TrackingStatus>('searching');
-  const [rescueOtp, setRescueOtp] = useState<string>('8492');
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [enteredFromQuickStations, setEnteredFromQuickStations] = useState(false);
-  const [recenterSignal, setRecenterSignal] = useState(0);
+  const [trackingStatus, setTrackingStatus] = useState<TrackingStatus>('searching'); const [rescueOtp, setRescueOtp] = useState<string>('8492');
+  const [elapsedSeconds, setElapsedSeconds] = useState(0); const [isSubmitting, setIsSubmitting] = useState(false);
+  const [enteredFromQuickStations, setEnteredFromQuickStations] = useState(false); const [recenterSignal, setRecenterSignal] = useState(0);
   const [isLocationSearchOpen, setIsLocationSearchOpen] = useState(false);
   const [activityHistory, setActivityHistory] = useState<RescueReceipt[]>(loadRescueHistory);
   const [activeStationForRoute, setActiveStationForRoute] = useState<SafeStation | null>(null);
   const [chosenGasSafeStation, setChosenGasSafeStation] = useState<SafeStation | null>(null);
-  const [simulateNight, setSimulateNight] = useState(false);
-  const [approvedExtra, setApprovedExtra] = useState<ScopeApprovalItem | null>(null);
-  const [isScopeDrawerOpen, setIsScopeDrawerOpen] = useState(false);
-  const [pendingScopeItem, setPendingScopeItem] = useState<ScopeApprovalItem>(MOCK_SCOPE_ITEMS[0]);
+  const [simulateNight, setSimulateNight] = useState(false); const [approvedExtra, setApprovedExtra] = useState<ScopeApprovalItem | null>(null);
+  const [isScopeDrawerOpen, setIsScopeDrawerOpen] = useState(false); const [pendingScopeItem, setPendingScopeItem] = useState<ScopeApprovalItem>(MOCK_SCOPE_ITEMS[0]);
   const submitTimerRef = useRef<number | null>(null);
 
   useEffect(() => () => { if (submitTimerRef.current !== null) window.clearTimeout(submitTimerRef.current); }, []);
@@ -71,9 +64,14 @@ export function useRescueOrderState() {
 
   const handleChangePickupMode = useCallback((mode: PickupMode) => {
     setPickupMode(mode);
-    if (mode === 'safe_station') setSelectedVoucherId('ANTOAN20');
-    else setSelectedVoucherId((prev) => (prev === 'ANTOAN20' ? null : prev));
-  }, []);
+    if (mode === 'safe_station') {
+      setSelectedVoucherId('ANTOAN20');
+      if (pickupTarget.station) activeInspect.inspectAndRoutePlace({ kind: 'safe_station', station: pickupTarget.station });
+    } else {
+      setSelectedVoucherId((prev) => (prev === 'ANTOAN20' ? null : prev));
+      activeInspect.clearActiveRoute();
+    }
+  }, [pickupTarget.station, activeInspect]);
 
   const issueSummary = useMemo(() => getIssueLabel(selectedIssue, ISSUE_OPTIONS, customNote), [selectedIssue, customNote]);
   const isNight = useMemo(() => isNightTimeWindow(simulateNight), [simulateNight]);
@@ -188,11 +186,13 @@ export function useRescueOrderState() {
   const handlePickCurrentWithDiscount = useCallback(() => { setPickupMode('current_location'); setSelectedVoucherId('ANTOAN20'); }, []);
 
   const handlePickSafeStationForRescue = (station: SafeStation) => {
-    setSelectedStationId(station.id); setPickupMode('safe_station'); handleSelectVoucher('ANTOAN20'); setEnteredFromQuickStations(true); setStep('pickup');
+    setSelectedStationId(station.id); setPickupMode('safe_station'); handleSelectVoucher('ANTOAN20');
+    setEnteredFromQuickStations(true); setStep('pickup'); activeInspect.inspectAndRoutePlace({ kind: 'safe_station', station }); setActiveTab('map');
   };
   const handleSelectGasStationForRescue = (station: GasStation) => {
     const safe = gasStationToSafeStation(station);
-    setChosenGasSafeStation(safe); setSelectedStationId(safe.id); setPickupMode('safe_station'); handleSelectVoucher('ANTOAN20'); setEnteredFromQuickStations(true); setStep('pickup');
+    setChosenGasSafeStation(safe); setSelectedStationId(safe.id); setPickupMode('safe_station'); handleSelectVoucher('ANTOAN20');
+    setEnteredFromQuickStations(true); setStep('pickup'); activeInspect.inspectAndRoutePlace({ kind: 'safe_station', station: safe }); setActiveTab('map');
   };
   const handleQuickCategory = (category: SafeStationCategory) => {
     clearOverlays(false);

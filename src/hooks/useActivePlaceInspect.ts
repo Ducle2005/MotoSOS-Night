@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { GeoCoord, GeoJsonLineString, InspectedPlace, SelectedDestination } from '../types/rescue';
-import { fetchMechanicDrivingRoute, fetchWalkingRoute } from '../utils/osrmApi';
+import { fetchSafeHavenRoute } from '../utils/osrmApi';
+import { computeHaversineMeters } from '../utils/rescueLogic';
 
 export interface RouteSummaryInfo {
   distanceMeters: number;
   durationMinutes: number;
+  instruction?: string;
 }
 
 export function useActivePlaceInspect(userCoord: GeoCoord) {
@@ -17,6 +19,17 @@ export function useActivePlaceInspect(userCoord: GeoCoord) {
 
   useEffect(() => () => abortRef.current?.abort(), []);
 
+  // Tự động xóa tuyến đường khi user đã tới nơi (< 20m)
+  useEffect(() => {
+    if (selectedDestination) {
+      const dist = computeHaversineMeters(userCoord, selectedDestination.coord);
+      if (dist < 20) {
+        setActiveRouteGeoJson(null);
+        setInspectRouteSummary(null);
+      }
+    }
+  }, [userCoord.lat, userCoord.lng, selectedDestination]);
+
   const clearActiveRoute = useCallback(() => {
     abortRef.current?.abort();
     setSelectedDestination(null);
@@ -28,12 +41,10 @@ export function useActivePlaceInspect(userCoord: GeoCoord) {
 
   const inspectAndRoutePlace = useCallback(
     async (place: InspectedPlace) => {
-      // 1. Lập tức hủy bỏ request cũ đang chạy
       abortRef.current?.abort();
       const controller = new AbortController();
       abortRef.current = controller;
 
-      // 2. Xóa sạch dữ liệu đường cũ NGAY LẬP TỨC (không chờ API)
       setActiveRouteGeoJson(null);
       setInspectRouteSummary(null);
       setIsLoadingInspectRoute(true);
@@ -75,17 +86,21 @@ export function useActivePlaceInspect(userCoord: GeoCoord) {
       setSelectedDestination(dest);
       setInspectedPlace(place);
 
+      const distToDest = computeHaversineMeters(userCoord, dest.coord);
+      if (distToDest < 20) {
+        setIsLoadingInspectRoute(false);
+        return;
+      }
+
       try {
-        const result =
-          place.kind === 'repair_shop'
-            ? await fetchMechanicDrivingRoute(userCoord, dest.coord, controller.signal)
-            : await fetchWalkingRoute(userCoord, dest.coord, controller.signal);
+        const result = await fetchSafeHavenRoute(userCoord, dest.coord, controller.signal);
 
         if (!controller.signal.aborted) {
           setActiveRouteGeoJson(result.geometry);
           setInspectRouteSummary({
             distanceMeters: result.distanceMeters,
             durationMinutes: result.durationMinutes,
+            instruction: result.firstStepInstruction,
           });
         }
       } catch {

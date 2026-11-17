@@ -3,9 +3,9 @@ import { useEffect, useRef, type MutableRefObject } from 'react';
 import {
   EMPTY_FEATURE_COLLECTION,
   POIS_UNCLUSTERED_LAYER_ID,
-  fitMapBoundsSafely,
+  fitSafeHavenBounds,
   setPoisGeoJson,
-  setUnifiedRouteGeometry,
+  setUserSafehavenRouteGeometry,
 } from '../components/map/mapLayers';
 import type {
   GasStation,
@@ -20,7 +20,6 @@ import type {
   SafeStation,
   SelectedDestination,
 } from '../types/rescue';
-import { computeBoundsBox } from '../utils/rescueLogic';
 
 interface UseMapMarkersSyncParams {
   mapRef: MutableRefObject<MapLibreMap | null>;
@@ -156,12 +155,14 @@ export function useMapMarkersSync(params: UseMapMarkersSyncParams) {
     };
   }, [mapReady]);
 
+  // Cập nhật tuyến đường riêng của User tới Điểm An Toàn (User SafeHaven Layer)
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapReady) return;
-    setUnifiedRouteGeometry(map, activeRouteGeoJson);
+    setUserSafehavenRouteGeometry(map, activeRouteGeoJson);
   }, [mapReady, activeRouteGeoJson]);
 
+  // Tự động fitBounds thấy trọn con đường từ User tới Điểm An Toàn đích
   const prevDestIdRef = useRef<string | null>(null);
   useEffect(() => {
     const map = mapRef.current;
@@ -172,17 +173,16 @@ export function useMapMarkersSync(params: UseMapMarkersSyncParams) {
     if (prevDestIdRef.current === selectedDestination.id) return;
     prevDestIdRef.current = selectedDestination.id;
 
-    const bounds = computeBoundsBox([
-      [userCoord.lng, userCoord.lat],
-      [selectedDestination.coord.lng, selectedDestination.coord.lat],
-    ]);
-    if (bounds) fitMapBoundsSafely(map, containerRef.current, bounds, 16.5, 450);
+    fitSafeHavenBounds(map, userCoord, selectedDestination.coord, 450);
   }, [mapReady, selectedDestination, userCoord]);
 
   return {
     clearAllMarkers: () => {
       const map = mapRef.current;
-      if (map) setPoisGeoJson(map, EMPTY_FEATURE_COLLECTION);
+      if (map) {
+        setPoisGeoJson(map, EMPTY_FEATURE_COLLECTION);
+        setUserSafehavenRouteGeometry(map, null);
+      }
     },
   };
 }

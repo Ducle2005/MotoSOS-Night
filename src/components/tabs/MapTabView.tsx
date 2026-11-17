@@ -11,6 +11,7 @@ import { RescueMap } from '../RescueMap';
 import { ScopeApprovalDrawer } from '../ScopeApprovalDrawer';
 import { TopOverlayBar } from '../TopOverlayBar';
 import { MapFilterChips } from '../map/MapFilterChips';
+import { UserSafeRouteBanner } from '../map/UserSafeRouteBanner';
 import { SOSModal } from '../modals/SOSModal';
 import { MechanicChatDrawer } from '../steps/MechanicChatDrawer';
 import { VoucherDrawerModal } from '../steps/VoucherDrawerModal';
@@ -51,6 +52,7 @@ export function MapTabView(props: MapTabViewProps) {
   const [isVoucherDrawerOpen, setIsVoucherDrawerOpen] = useState(false);
   const [isChatDrawerOpen, setIsChatDrawerOpen] = useState(false);
   const [isSosOpen, setIsSosOpen] = useState(false);
+  const [zoomSafeRouteSignal, setZoomSafeRouteSignal] = useState(0);
   const { step, trackingStatus, isOffline } = props;
 
   useEffect(() => {
@@ -74,7 +76,7 @@ export function MapTabView(props: MapTabViewProps) {
         mapFilter={props.mapFilter} pickupMode={props.pickupMode} pickupCoord={props.pickupCoord}
         walkingRoute={props.walkingRoute} gasRoute={props.gasRoute} policeRoute={props.policeRoute} mechanicRoute={props.mechanicRoute}
         routeStartTimeMs={props.routeStartTimeMs} initialEtaMinutes={props.initialEtaMinutes} step={step} trackingStatus={trackingStatus}
-        mechanic={MOCK_MECHANIC} recenterSignal={props.recenterSignal}
+        mechanic={MOCK_MECHANIC} recenterSignal={props.recenterSignal} zoomSafeRouteSignal={zoomSafeRouteSignal}
         isPinPickerMode={props.pinPicker.isActive} isPinDragging={props.pinPicker.isDragging}
         isMapTabActive={props.isMapTabActive}
         onSelectStation={(id) => { props.onSelectStation(id); if (step === 'pickup') props.onChangeMode('safe_station'); }}
@@ -134,6 +136,18 @@ export function MapTabView(props: MapTabViewProps) {
 
       <BottomSheetShell
         step={step}
+        floatingTopSlot={
+          props.activeRouteGeoJson && props.selectedDestination && props.inspectRouteSummary ? (
+            <UserSafeRouteBanner
+              title={props.selectedDestination.title}
+              distanceMeters={props.inspectRouteSummary.distanceMeters}
+              durationMinutes={props.inspectRouteSummary.durationMinutes}
+              instruction={props.inspectRouteSummary.instruction}
+              onZoomFit={() => setZoomSafeRouteSignal((s) => s + 1)}
+              onClose={props.onClearActiveRoute || props.onClearInspection}
+            />
+          ) : null
+        }
         isConvenienceOpen={step === 'idle' && (props.mapFilter === 'safe_stations' || props.inspectedPlace?.kind === 'safe_station') && !props.pinPicker.isActive}
         isGasListOpen={step === 'idle' && props.mapFilter === 'gas_stations' && !props.pinPicker.isActive}
         isPoliceListOpen={step === 'idle' && props.mapFilter === 'police_stations' && !props.pinPicker.isActive}

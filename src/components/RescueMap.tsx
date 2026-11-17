@@ -24,6 +24,7 @@ import type {
 import {
   ensurePoisLayers,
   ensureRescueRouteLayers,
+  fitSafeHavenBounds,
   getViewportPadding,
   setAccuracyCircleGeoJson,
 } from './map/mapLayers';
@@ -47,6 +48,7 @@ interface RescueMapProps {
   walkingRoute?: GeoJsonLineString | null; gasRoute?: GeoJsonLineString | null; policeRoute?: GeoJsonLineString | null;
   mechanicRoute: GeoJsonLineString | null; routeStartTimeMs: number | null; initialEtaMinutes: number;
   step: RescueStep; trackingStatus: TrackingStatus; mechanic: MechanicInfo; recenterSignal: number;
+  zoomSafeRouteSignal?: number;
   isPinPickerMode?: boolean; isPinDragging?: boolean; isMapTabActive?: boolean;
   onSelectStation: (stationId: string) => void; onInspectPlace: (place: InspectedPlace) => void;
   onSelectGasStation: (stationId: string | null) => void; onSelectPoliceStation: (stationId: string | null) => void;
@@ -60,7 +62,7 @@ export function RescueMap(props: RescueMapProps) {
     selectedDestination, selectedStationId, inspectedPlace,
     activeRouteGeoJson, inspectRoute, mapFilter,
     pickupMode, pickupCoord, mechanicRoute, routeStartTimeMs,
-    initialEtaMinutes, step, trackingStatus, mechanic, recenterSignal,
+    initialEtaMinutes, step, trackingStatus, mechanic, recenterSignal, zoomSafeRouteSignal,
     isPinPickerMode = false, isPinDragging = false,
     onSelectStation, onInspectPlace, onSelectGasStation, onSelectPoliceStation,
     onPinMoveStart, onPinMoveEnd, onEtaMinuteChange, onMechanicApproaching, onMechanicArrived,
@@ -186,6 +188,17 @@ export function RescueMap(props: RescueMapProps) {
       duration: 600,
     });
   }, [userLocation.coord.lat, userLocation.coord.lng, recenterSignal, mapReady]);
+
+  const prevZoomRouteRef = useRef(zoomSafeRouteSignal);
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady || !zoomSafeRouteSignal) return;
+    if (prevZoomRouteRef.current === zoomSafeRouteSignal) return;
+    prevZoomRouteRef.current = zoomSafeRouteSignal;
+    if (effectiveDestination) {
+      fitSafeHavenBounds(map, userLocation.coord, effectiveDestination.coord, 450);
+    }
+  }, [zoomSafeRouteSignal, mapReady, effectiveDestination, userLocation.coord]);
 
   useEffect(() => {
     const map = mapRef.current;

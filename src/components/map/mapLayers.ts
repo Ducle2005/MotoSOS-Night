@@ -39,6 +39,10 @@ export const ROUTE_SOURCE_ID = 'motosos-route-source';
 export const ROUTE_CASING_LAYER_ID = 'motosos-route-casing';
 export const ROUTE_LINE_LAYER_ID = 'motosos-route-line';
 
+export const USER_SAFEHAVEN_SOURCE_ID = 'user-safehaven-source';
+export const USER_SAFEHAVEN_CASING_LAYER_ID = 'user-safehaven-casing';
+export const USER_SAFEHAVEN_LINE_LAYER_ID = 'user-safehaven-line';
+
 export function ensureRescueRouteLayers(map: MapLibreMap): void {
   if (!map.getSource('gps-accuracy-circle')) {
     map.addSource('gps-accuracy-circle', { type: 'geojson', data: EMPTY_FEATURE_COLLECTION });
@@ -53,6 +57,30 @@ export function ensureRescueRouteLayers(map: MapLibreMap): void {
     map.addLayer({
       id: 'gps-accuracy-stroke', type: 'line', source: 'gps-accuracy-circle',
       paint: { 'line-color': '#60a5fa', 'line-opacity': 0.4, 'line-width': 1.5 },
+    });
+  }
+
+  // 1. Tuyến đường điều hướng của User tới Trạm An Toàn (Xanh dương nét đứt)
+  if (!map.getSource(USER_SAFEHAVEN_SOURCE_ID)) {
+    map.addSource(USER_SAFEHAVEN_SOURCE_ID, { type: 'geojson', data: EMPTY_FEATURE_COLLECTION });
+  }
+  if (!map.getLayer(USER_SAFEHAVEN_CASING_LAYER_ID)) {
+    map.addLayer({
+      id: USER_SAFEHAVEN_CASING_LAYER_ID, type: 'line', source: USER_SAFEHAVEN_SOURCE_ID,
+      layout: { 'line-join': 'round', 'line-cap': 'round' },
+      paint: { 'line-color': '#ffffff', 'line-width': 7.5, 'line-opacity': 0.98 },
+    });
+  }
+  if (!map.getLayer(USER_SAFEHAVEN_LINE_LAYER_ID)) {
+    map.addLayer({
+      id: USER_SAFEHAVEN_LINE_LAYER_ID, type: 'line', source: USER_SAFEHAVEN_SOURCE_ID,
+      layout: { 'line-join': 'round', 'line-cap': 'round' },
+      paint: {
+        'line-color': '#0284C7',
+        'line-width': 4.5,
+        'line-dasharray': [2, 1.3],
+        'line-opacity': 1,
+      },
     });
   }
 
@@ -85,6 +113,10 @@ export function ensureRescueRouteLayers(map: MapLibreMap): void {
   ensureCasedRouteLayer(map, 'mechanic-route', '#f59e0b', 4);
 }
 
+export function setUserSafehavenRouteGeometry(map: MapLibreMap, geometry: GeoJsonLineString | null): void {
+  setRouteSourceGeometry(map, USER_SAFEHAVEN_SOURCE_ID, geometry);
+}
+
 export function setUnifiedRouteGeometry(map: MapLibreMap, geometry: GeoJsonLineString | null): void {
   setRouteSourceGeometry(map, ROUTE_SOURCE_ID, geometry);
 }
@@ -107,6 +139,21 @@ export function setAccuracyCircleGeoJson(map: MapLibreMap, coord: GeoCoord, accu
     return;
   }
   source.setData(buildAccuracyCirclePolygon(coord, accuracyMeters));
+}
+
+export function fitSafeHavenBounds(
+  map: MapLibreMap, userCoord: GeoCoord, destCoord: GeoCoord, duration = 450,
+): void {
+  map.resize();
+  map.setPadding({ top: 0, bottom: 0, left: 0, right: 0 });
+  const minLng = Math.min(userCoord.lng, destCoord.lng);
+  const maxLng = Math.max(userCoord.lng, destCoord.lng);
+  const minLat = Math.min(userCoord.lat, destCoord.lat);
+  const maxLat = Math.max(userCoord.lat, destCoord.lat);
+  map.fitBounds(
+    [[minLng, minLat], [maxLng, maxLat]],
+    { padding: { top: 130, bottom: 310, left: 48, right: 48 }, maxZoom: 16, duration },
+  );
 }
 
 export function getViewportPadding(container: HTMLDivElement | null, forRoute: boolean) {
@@ -133,7 +180,6 @@ export const POIS_UNCLUSTERED_LAYER_ID = 'pois-unclustered-layer';
 export const POIS_LABEL_LAYER_ID = 'pois-label-layer';
 
 export function ensurePoisLayers(map: MapLibreMap): void {
-  // Gỡ các layer cụm hoặc nhãn cũ nếu có
   if (map.getLayer(POIS_CLUSTER_COUNT_ID)) map.removeLayer(POIS_CLUSTER_COUNT_ID);
   if (map.getLayer(POIS_CLUSTER_LAYER_ID)) map.removeLayer(POIS_CLUSTER_LAYER_ID);
   if (map.getLayer(POIS_LABEL_LAYER_ID)) map.removeLayer(POIS_LABEL_LAYER_ID);
@@ -146,7 +192,6 @@ export function ensurePoisLayers(map: MapLibreMap): void {
     });
   }
 
-  // 1. Vòng hào quang xanh ngọc nổi bật cho điểm đang chọn
   if (!map.getLayer(POIS_SELECTED_HALO_ID)) {
     map.addLayer({
       id: POIS_SELECTED_HALO_ID, type: 'circle', source: POIS_SOURCE_ID,
@@ -162,7 +207,6 @@ export function ensurePoisLayers(map: MapLibreMap): void {
     });
   }
 
-  // 2. Ghim tròn chuẩn mẫu với viền trắng, bóng đổ và icon nét mảnh (GPU 120fps)
   if (!map.getLayer(POIS_UNCLUSTERED_LAYER_ID)) {
     map.addLayer({
       id: POIS_UNCLUSTERED_LAYER_ID, type: 'symbol', source: POIS_SOURCE_ID,
