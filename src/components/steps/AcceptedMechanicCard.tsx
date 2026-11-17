@@ -20,29 +20,21 @@ interface AcceptedMechanicCardProps {
   onOpenChat: () => void;
   onConfirmOtp: () => void;
   onRequestCancel: () => void;
+  onOpenSupport?: () => void;
+  isCancelUnlocked?: boolean;
 }
 
 export function AcceptedMechanicCard({
-  issueSummary,
-  pickupTitle,
-  pickupAddress,
-  mechanic,
-  liveEtaMinutes,
-  hasArrived,
-  pricing,
-  otp,
-  trackingStatus,
-  elapsedSeconds,
-  onOpenChat,
-  onConfirmOtp,
-  onRequestCancel,
+  issueSummary, pickupTitle, pickupAddress, mechanic, liveEtaMinutes,
+  hasArrived, pricing, otp, trackingStatus, elapsedSeconds,
+  onOpenChat, onConfirmOtp, onRequestCancel, onOpenSupport, isCancelUnlocked,
 }: AcceptedMechanicCardProps) {
   const [callNotice, setCallNotice] = useState(false);
   const [isPeekMode, setIsPeekMode] = useState(false);
 
   const hasDiscount = pricing.appliedVoucher !== null && pricing.discountAmount > 0;
   const isRepairing = trackingStatus === 'repairing';
-  const isArrived = trackingStatus === 'arrived' || hasArrived || isRepairing;
+  const isArrived = !isCancelUnlocked && (trackingStatus === 'arrived' || hasArrived || isRepairing);
   const cleanLocation = cleanAddressSnippet(pickupTitle, pickupAddress);
 
   if (isPeekMode) {
@@ -202,12 +194,23 @@ export function AcceptedMechanicCard({
                 Thợ đã có mặt • Không thể hủy chuyến
               </span>
             </div>
-            <a
-              href="tel:1900636812"
-              className="text-[11px] font-bold text-[#13693E] underline shrink-0 hover:text-emerald-800"
-            >
-              Hỗ trợ
-            </a>
+            {onOpenSupport ? (
+              <button
+                type="button"
+                onClick={onOpenSupport}
+                data-testid="support-locked-btn"
+                className="text-[11px] font-bold text-[#13693E] underline shrink-0 hover:text-emerald-800"
+              >
+                Hỗ trợ
+              </button>
+            ) : (
+              <a
+                href="tel:1900636812"
+                className="text-[11px] font-bold text-[#13693E] underline shrink-0 hover:text-emerald-800"
+              >
+                Hỗ trợ
+              </a>
+            )}
           </div>
         ) : (
           <button

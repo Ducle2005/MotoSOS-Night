@@ -1,52 +1,30 @@
 import { CheckCircle2, Loader2 } from 'lucide-react';
 import { useState } from 'react';
-import type {
-  MechanicInfo,
-  OrderPricing,
-  TrackingStatus,
-} from '../../types/rescue';
+import type { ActiveRescueInfo, GeoCoord, MechanicInfo, OrderPricing, TrackingStatus } from '../../types/rescue';
 import { formatVnd } from '../../utils/pricingAndSimLogic';
 import { CancelRescueModal } from '../CancelRescueModal';
+import { RescueSupportModal } from '../RescueSupportModal';
 import { AcceptedMechanicCard } from './AcceptedMechanicCard';
 
 interface TrackingStepProps {
-  status: TrackingStatus;
-  issueSummary: string;
-  pickupTitle: string;
-  pickupAddress: string;
-  mechanic: MechanicInfo;
-  liveEtaMinutes: number;
-  hasArrived: boolean;
-  pricing: OrderPricing;
-  rescueOtp: string;
-  elapsedSeconds: number;
-  onOpenChat: () => void;
-  onDemoAdvance: () => void;
-  onConfirmOtp: () => void;
-  onCancelOrder: () => void;
+  status: TrackingStatus; issueSummary: string; pickupTitle: string; pickupAddress: string;
+  mechanic: MechanicInfo; liveEtaMinutes: number; hasArrived: boolean; pricing: OrderPricing;
+  rescueOtp: string; elapsedSeconds: number; onOpenChat: () => void; onDemoAdvance: () => void;
+  onConfirmOtp: () => void; onCancelOrder: () => void; onCompleteReset: () => void;
   onConfirmCancelDetailed?: (reason: string, feeAmount: number) => void;
-  onCompleteReset: () => void;
+  activeRescue?: ActiveRescueInfo | null; userCoord?: GeoCoord; mechanicCoord?: GeoCoord;
+  pickupCoord?: GeoCoord; gpsGapMeters?: number; onShareZalo?: () => void;
 }
 
 export function TrackingStep({
-  status,
-  issueSummary,
-  pickupTitle,
-  pickupAddress,
-  mechanic,
-  liveEtaMinutes,
-  hasArrived,
-  pricing,
-  rescueOtp,
-  elapsedSeconds,
-  onOpenChat,
-  onDemoAdvance,
-  onConfirmOtp,
-  onCancelOrder,
-  onConfirmCancelDetailed,
-  onCompleteReset,
+  status, issueSummary, pickupTitle, pickupAddress, mechanic, liveEtaMinutes,
+  hasArrived, pricing, rescueOtp, elapsedSeconds, onOpenChat, onDemoAdvance,
+  onConfirmOtp, onCancelOrder, onConfirmCancelDetailed, onCompleteReset,
+  activeRescue, userCoord, mechanicCoord, pickupCoord, gpsGapMeters, onShareZalo,
 }: TrackingStepProps) {
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
+  const [isCancelUnlocked, setIsCancelUnlocked] = useState(false);
 
   const handleCancelDetailed = (reason: string, feeAmount: number) => {
     if (onConfirmCancelDetailed) onConfirmCancelDetailed(reason, feeAmount);
@@ -151,15 +129,41 @@ export function TrackingStep({
           onOpenChat={onOpenChat}
           onConfirmOtp={onConfirmOtp}
           onRequestCancel={() => setIsCancelModalOpen(true)}
+          onOpenSupport={() => setIsSupportModalOpen(true)}
+          isCancelUnlocked={isCancelUnlocked}
         />
 
         <CancelRescueModal
           isOpen={isCancelModalOpen}
           elapsedSeconds={elapsedSeconds}
           mechanicName={mechanic.name}
-          isMechanicArrived={status === 'arrived' || hasArrived || status === 'repairing'}
+          isMechanicArrived={!isCancelUnlocked && (status === 'arrived' || hasArrived || status === 'repairing')}
           onConfirmCancel={handleCancelDetailed}
           onClose={() => setIsCancelModalOpen(false)}
+        />
+
+        <RescueSupportModal
+          isOpen={isSupportModalOpen}
+          onClose={() => setIsSupportModalOpen(false)}
+          activeRescue={activeRescue ?? {
+            status: status === 'arrived' ? 'arrived' : 'en_route',
+            etaMinutes: liveEtaMinutes, mechanic, otpCode: rescueOtp,
+            serviceName: issueSummary, finalPrice: pricing.finalPrice,
+            pickupAddress, elapsedSeconds,
+          }}
+          mechanic={mechanic}
+          userCoord={userCoord}
+          mechanicCoord={mechanicCoord}
+          pickupCoord={pickupCoord}
+          gpsGapMeters={gpsGapMeters}
+          onUnlockCancel={() => {
+            setIsCancelUnlocked(true);
+            setIsCancelModalOpen(true);
+          }}
+          onForceCancel={(fee) => {
+            handleCancelDetailed('Cần hủy chuyến bất khả kháng (Phí công thợ di chuyển)', fee);
+          }}
+          onShareZalo={onShareZalo}
         />
       </>
     );

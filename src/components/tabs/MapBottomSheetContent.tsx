@@ -220,6 +220,7 @@ export function MapBottomSheetContent(props: MapBottomSheetContentProps) {
           pricing={props.pricing}
           rescueOtp={props.rescueOtp}
           elapsedSeconds={props.elapsedSeconds}
+          userCoord={props.userLocation.coord}
           onOpenChat={props.onOpenChat}
           onDemoAdvance={props.onDemoAdvance}
           onConfirmOtp={props.onConfirmOtp}
