@@ -3,11 +3,12 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   MEMBERSHIP_GROUPS, MEMBERSHIP_PLANS,
-  getActiveMembershipId, purchaseOrSwitchMembership,
+  getActiveMembershipId, getPurchasedMemberships, purchaseOrSwitchMembership,
   type MembershipCardPlan, type MembershipGroup,
 } from '../data/membershipCatalog';
 import { useSmoothHorizontalWheel } from '../hooks/useSmoothHorizontalWheel';
 import { formatVnd } from '../utils/pricingAndSimLogic';
+import { MembershipCheckoutModal } from './MembershipCheckoutModal';
 import { MyMembershipView } from './MyMembershipView';
 import { PromoCarouselTab } from './PromoCarouselTab';
 
@@ -20,10 +21,18 @@ export function MembershipHubModal({ isOpen, onClose, onUsePromo, initialTab = '
   const [activeTab, setActiveTab] = useState<'my_plan' | 'cards' | 'promos'>(initialTab);
   const [selectedGroup, setSelectedGroup] = useState<MembershipGroup>('vip');
   const [currentId, setCurrentId] = useState<string>(() => getActiveMembershipId());
+  const [purchasedList, setPurchasedList] = useState(() => getPurchasedMemberships());
   const [currentCardIndex, setCurrentCardIndex] = useState(1);
   const [inspectingPlan, setInspectingPlan] = useState<MembershipCardPlan | null>(null);
+  const [checkoutCard, setCheckoutCard] = useState<MembershipCardPlan | null>(null);
 
-  useEffect(() => { if (isOpen) setActiveTab(initialTab); }, [isOpen, initialTab]);
+  useEffect(() => {
+    if (isOpen) {
+      setActiveTab(initialTab);
+      setCurrentId(getActiveMembershipId());
+      setPurchasedList(getPurchasedMemberships());
+    }
+  }, [isOpen, initialTab]);
 
   const { containerRef: groupScrollRef, dragHandlers: groupDragHandlers } = useSmoothHorizontalWheel();
   const { containerRef: cardScrollRef, dragHandlers: cardDragHandlers, isDragging, resetScroll } = useSmoothHorizontalWheel();
@@ -35,6 +44,14 @@ export function MembershipHubModal({ isOpen, onClose, onUsePromo, initialTab = '
   const handleActivate = (planId: string) => {
     purchaseOrSwitchMembership(planId);
     setCurrentId(planId);
+    setPurchasedList(getPurchasedMemberships());
+  };
+
+  const handleCheckoutSuccess = (planId: string) => {
+    setCheckoutCard(null);
+    setCurrentId(planId);
+    setPurchasedList(getPurchasedMemberships());
+    setActiveTab('my_plan');
   };
 
   const handleSelectGroup = (groupId: MembershipGroup) => {
@@ -55,16 +72,11 @@ export function MembershipHubModal({ isOpen, onClose, onUsePromo, initialTab = '
       className="fixed inset-0 z-[999] flex items-end justify-center bg-slate-950/60 p-0 sm:items-center sm:p-4 animate-in fade-in duration-200"
       onClick={onClose}
     >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-[430px] max-h-[92vh] rounded-t-[28px] border-t border-slate-100 bg-white shadow-2xl sm:rounded-[28px] sm:border flex flex-col overflow-hidden"
-      >
+      <div onClick={(e) => e.stopPropagation()} className="w-full max-w-[430px] max-h-[92vh] rounded-t-[28px] border-t border-slate-100 bg-white shadow-2xl sm:rounded-[28px] sm:border flex flex-col overflow-hidden">
         {/* Header Trắng Tinh Gọn */}
         <div className="shrink-0 px-4 pt-3.5 pb-2.5 border-b border-slate-100 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-50 text-[#13693E]">
-              <Crown className="h-4 w-4" />
-            </span>
+            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-50 text-[#13693E]"><Crown className="h-4 w-4" /></span>
             <div>
               <h2 className="text-[17px] font-extrabold text-slate-950 tracking-tight">Hạng thành viên &amp; Ưu đãi</h2>
               <p className="text-[11px] font-semibold text-[#13693E]">Hệ thống 15 thẻ hội viên chuẩn Grab</p>
@@ -77,22 +89,13 @@ export function MembershipHubModal({ isOpen, onClose, onUsePromo, initialTab = '
 
         {/* 3 Tab chuyển đổi phong cách Grab */}
         <div className="shrink-0 px-3 pt-2.5 pb-1 bg-slate-50/60 border-b border-slate-100 flex gap-1.5">
-          <button
-            type="button" onClick={() => setActiveTab('my_plan')}
-            className={`flex-1 py-1.5 rounded-xl text-[11.5px] font-bold transition-all flex items-center justify-center gap-1 ${activeTab === 'my_plan' ? 'bg-[#13693E] text-white shadow-xs' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}
-          >
+          <button type="button" onClick={() => setActiveTab('my_plan')} className={`flex-1 py-1.5 rounded-xl text-[11.5px] font-bold transition-all flex items-center justify-center gap-1 ${activeTab === 'my_plan' ? 'bg-[#13693E] text-white shadow-xs' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
             <UserCheck className="h-3.5 w-3.5" /><span>Gói của tôi</span>
           </button>
-          <button
-            type="button" onClick={() => setActiveTab('cards')}
-            className={`flex-1 py-1.5 rounded-xl text-[11.5px] font-bold transition-all flex items-center justify-center gap-1 ${activeTab === 'cards' ? 'bg-[#13693E] text-white shadow-xs' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}
-          >
+          <button type="button" onClick={() => setActiveTab('cards')} className={`flex-1 py-1.5 rounded-xl text-[11.5px] font-bold transition-all flex items-center justify-center gap-1 ${activeTab === 'cards' ? 'bg-[#13693E] text-white shadow-xs' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
             <Sparkles className="h-3.5 w-3.5" /><span>15 Thẻ hội viên</span>
           </button>
-          <button
-            type="button" onClick={() => setActiveTab('promos')}
-            className={`flex-1 py-1.5 rounded-xl text-[11.5px] font-bold transition-all flex items-center justify-center gap-1 ${activeTab === 'promos' ? 'bg-[#13693E] text-white shadow-xs' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}
-          >
+          <button type="button" onClick={() => setActiveTab('promos')} className={`flex-1 py-1.5 rounded-xl text-[11.5px] font-bold transition-all flex items-center justify-center gap-1 ${activeTab === 'promos' ? 'bg-[#13693E] text-white shadow-xs' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
             <Tag className="h-3.5 w-3.5" /><span>Ưu đãi (6)</span>
           </button>
         </div>
@@ -103,15 +106,11 @@ export function MembershipHubModal({ isOpen, onClose, onUsePromo, initialTab = '
             <MyMembershipView onExplorePlans={() => setActiveTab('cards')} onBookNow={() => { onClose(); onBookNow?.(); }} />
           ) : activeTab === 'cards' ? (
             <>
-              {/* 3 Chip Lọc Nhóm Thẻ */}
               <div>
                 <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Chọn nhóm gói cứu hộ:</p>
                 <div ref={groupScrollRef} {...groupDragHandlers} className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none touch-pan-x cursor-grab">
                   {MEMBERSHIP_GROUPS.map((grp) => (
-                    <button
-                      key={grp.id} type="button" onClick={() => handleSelectGroup(grp.id)}
-                      className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${selectedGroup === grp.id ? 'bg-slate-900 text-white shadow-xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
-                    >
+                    <button key={grp.id} type="button" onClick={() => handleSelectGroup(grp.id)} className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${selectedGroup === grp.id ? 'bg-slate-900 text-white shadow-xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}>
                       {grp.label}
                     </button>
                   ))}
@@ -124,17 +123,12 @@ export function MembershipHubModal({ isOpen, onClose, onUsePromo, initialTab = '
                   <span className="text-slate-500">Lăn chuột hoặc kéo ngang để xem</span>
                   <span className="text-[11px] font-bold text-[#13693E]">{currentCardIndex} / {visiblePlans.length}</span>
                 </div>
-                <div
-                  ref={cardScrollRef} {...cardDragHandlers} onScroll={handleCardScroll}
-                  className={`flex items-stretch gap-3 overflow-x-auto scrollbar-none touch-pan-x select-none px-4 pb-2 ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
-                >
+                <div ref={cardScrollRef} {...cardDragHandlers} onScroll={handleCardScroll} className={`flex items-stretch gap-3 overflow-x-auto scrollbar-none touch-pan-x select-none px-4 pb-2 ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}>
                   {visiblePlans.map((plan) => {
                     const isCurrent = plan.id === currentId;
+                    const isOwned = purchasedList.some((p) => p.id === plan.id && (p.status === 'active' || p.remainingQuota > 0));
                     return (
-                      <div
-                        key={plan.id}
-                        className={`w-[272px] shrink-0 p-3.5 rounded-2xl border transition-all bg-white flex flex-col justify-between ${isCurrent ? 'border-[#13693E] ring-1 ring-[#13693E]/30 shadow-md' : 'border-slate-200/90 shadow-xs hover:border-slate-300'}`}
-                      >
+                      <div key={plan.id} className={`w-[272px] shrink-0 p-3.5 rounded-2xl border transition-all bg-white flex flex-col justify-between ${isCurrent ? 'border-[#13693E] ring-1 ring-[#13693E]/30 shadow-md' : 'border-slate-200/90 shadow-xs hover:border-slate-300'}`}>
                         <div>
                           <div className="flex items-start justify-between gap-1.5">
                             <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200 truncate max-w-[120px]">{plan.badgeText}</span>
@@ -159,12 +153,16 @@ export function MembershipHubModal({ isOpen, onClose, onUsePromo, initialTab = '
                             <Info className="h-3 w-3" /><span>Chi tiết</span>
                           </button>
                           {isCurrent ? (
-                            <span className="px-3 py-1 rounded-xl bg-emerald-50 text-[#13693E] border border-emerald-200 font-bold text-[11.5px] inline-flex items-center gap-1">
+                            <span className="px-3.5 py-1.5 rounded-full bg-[#E6F4EC] text-[#13693E] text-[12px] font-bold inline-flex items-center gap-1">
                               <Check className="h-3 w-3" /> Đang dùng
                             </span>
+                          ) : isOwned ? (
+                            <button type="button" onClick={() => handleActivate(plan.id)} className="px-3.5 py-1.5 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-[12px] font-bold shadow-xs active:scale-95 transition-all">
+                              Dùng gói
+                            </button>
                           ) : (
-                            <button type="button" onClick={() => handleActivate(plan.id)} className="px-3 py-1 rounded-xl bg-[#13693E] hover:bg-[#0F5C36] text-white font-bold text-[11.5px] shadow-xs active:scale-95 transition-all">
-                              Kích hoạt
+                            <button type="button" onClick={() => setCheckoutCard(plan)} className="px-4 py-1.5 rounded-full bg-[#13693E] hover:bg-[#0F5C36] text-white text-[12px] font-extrabold transition-colors active:scale-95 shadow-xs">
+                              Mua
                             </button>
                           )}
                         </div>
@@ -185,25 +183,31 @@ export function MembershipHubModal({ isOpen, onClose, onUsePromo, initialTab = '
             <div className="w-full max-w-[360px] rounded-2xl bg-white p-4 shadow-2xl space-y-2.5">
               <div className="flex items-center justify-between border-b border-slate-100 pb-2">
                 <h4 className="font-extrabold text-slate-900 text-sm">Điều kiện: {inspectingPlan.name}</h4>
-                <button type="button" onClick={() => setInspectingPlan(null)} className="p-1 rounded-full text-slate-400 hover:text-slate-600">
-                  <X className="h-4 w-4" />
-                </button>
+                <button type="button" onClick={() => setInspectingPlan(null)} className="p-1 rounded-full text-slate-400 hover:text-slate-600"><X className="h-4 w-4" /></button>
               </div>
               <div className="text-xs text-slate-600 space-y-1.5">
                 <p>• <strong>Khấu trừ:</strong> Giảm {inspectingPlan.discountPercent}%, tối đa {formatVnd(inspectingPlan.maxDiscountPerOrder)}/ca.</p>
-                <p>• <strong>Hạn mức lượt dùng:</strong> {inspectingPlan.monthlyQuota} lượt cứu hộ tiêu chuẩn trong chu kỳ {inspectingPlan.billingCycle}.</p>
-                <p>• <strong>Phụ phí đêm khuya (22h - 5h):</strong> {inspectingPlan.nightFeeWaived ? 'Miễn phí hoàn toàn 100%.' : 'Áp dụng biểu phí tiêu chuẩn.'}</p>
-                <p>• <strong>Bảo hiểm cứu hộ:</strong> Lên tới {formatVnd(inspectingPlan.insuranceLimit)} bảo vệ xe và khách hàng.</p>
+                <p>• <strong>Hạn mức:</strong> {inspectingPlan.monthlyQuota} lượt cứu hộ tiêu chuẩn trong {inspectingPlan.billingCycle}.</p>
+                <p>• <strong>Phụ phí đêm (22h - 5h):</strong> {inspectingPlan.nightFeeWaived ? 'Miễn phí 100%.' : 'Áp dụng biểu phí thường.'}</p>
+                <p>• <strong>Bảo hiểm cứu hộ:</strong> Lên tới {formatVnd(inspectingPlan.insuranceLimit)} bảo vệ xe.</p>
               </div>
-              <button
-                type="button" onClick={() => { handleActivate(inspectingPlan.id); setInspectingPlan(null); }}
-                className="w-full mt-2 py-2 rounded-xl bg-[#13693E] text-white text-xs font-bold shadow-xs active:scale-95"
-              >
-                Kích hoạt thẻ này
-              </button>
+              {inspectingPlan.id === currentId ? (
+                <div className="w-full mt-2 py-2 text-center rounded-xl bg-[#E6F4EC] text-[#13693E] text-xs font-bold">Đang dùng gói này</div>
+              ) : purchasedList.some((p) => p.id === inspectingPlan.id && (p.status === 'active' || p.remainingQuota > 0)) ? (
+                <button type="button" onClick={() => { handleActivate(inspectingPlan.id); setInspectingPlan(null); }} className="w-full mt-2 py-2 rounded-xl bg-slate-900 text-white text-xs font-bold shadow-xs active:scale-95">
+                  Dùng gói này
+                </button>
+              ) : (
+                <button type="button" onClick={() => { const p = inspectingPlan; setInspectingPlan(null); setCheckoutCard(p); }} className="w-full mt-2 py-2 rounded-xl bg-[#13693E] text-white text-xs font-bold shadow-xs active:scale-95">
+                  Mua gói này ({formatVnd(inspectingPlan.price)})
+                </button>
+              )}
             </div>
           </div>
         )}
+
+        {/* Modal Thanh Toán Gói Hội Viên */}
+        <MembershipCheckoutModal isOpen={!!checkoutCard} card={checkoutCard} onClose={() => setCheckoutCard(null)} onSuccess={handleCheckoutSuccess} />
       </div>
     </div>,
     document.body
